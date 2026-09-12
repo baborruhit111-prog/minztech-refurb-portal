@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   Database, 
   CheckCircle2, 
@@ -99,6 +99,16 @@ export default function SupabaseSyncModal({ isOpen, onClose }) {
     } else {
       setStatusMessage(res.message);
     }
+  };
+
+  const handleRemoveQueueItem = (id) => {
+    const updated = syncQueue.filter(item => item.id !== id);
+    setSyncQueue(updated);
+    localStorage.setItem("minztech_sync_queue", JSON.stringify(updated));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("minztech_sync_updated", { detail: { queueCount: updated.length } }));
+    }
+    showToast("Operation dismissed from queue.");
   };
 
   const copySqlSchema = () => {
@@ -289,9 +299,27 @@ export default function SupabaseSyncModal({ isOpen, onClose }) {
                 </div>
                 <div className="space-y-1.5 max-h-32 overflow-y-auto">
                   {syncQueue.map((item) => (
-                    <div key={item.id} className="p-2 bg-brand-dark rounded-lg text-[11px] text-gray-400 flex items-center justify-between font-mono">
-                      <span>{item.action.toUpperCase()} on {item.table}</span>
-                      <span className="text-gray-500">{new Date(item.timestamp).toLocaleTimeString()}</span>
+                    <div key={item.id} className="p-2 bg-brand-dark rounded-lg text-[11px] text-gray-400 font-mono space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-gray-200">
+                          {item.action.toUpperCase()} on <code className="text-brand-neon">{item.table}</code>
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-gray-500 text-[10px]">{new Date(item.timestamp).toLocaleTimeString()}</span>
+                          <button
+                            onClick={() => handleRemoveQueueItem(item.id)}
+                            className="text-gray-500 hover:text-red-400 font-bold px-1"
+                            title="Dismiss this pending operation"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                      {item.lastError && (
+                        <div className="text-[10px] text-amber-400 bg-amber-950/30 px-1.5 py-0.5 rounded border border-amber-500/20 truncate">
+                          {item.lastError}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -305,7 +333,7 @@ export default function SupabaseSyncModal({ isOpen, onClose }) {
           <div className="space-y-3 text-xs">
             <div className="flex items-center justify-between">
               <p className="text-gray-300">
-                Run this SQL script in your Supabase project (<strong>Database &gt; SQL Editor</strong>) to create all 6 tables and policies with 1 click:
+                Run this SQL script in your Supabase project (<strong>Database &gt; SQL Editor</strong>) to create all 7 tables and policies with 1 click:
               </p>
               <button
                 onClick={copySqlSchema}

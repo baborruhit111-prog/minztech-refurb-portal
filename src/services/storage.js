@@ -6,7 +6,7 @@ import {
   INITIAL_MEDIA_ASSETS, 
   INITIAL_TASKS 
 } from "../data/mockData.js";
-import { addToSyncQueue, safeSupabaseExec } from "./supabaseClient.js";
+import { addToSyncQueue, safeSupabaseExec, safeSupabaseUpsert } from "./supabaseClient.js";
 
 const KEYS = {
   USERS: "minztech_users",
@@ -57,7 +57,7 @@ export const saveUser = async (user) => {
   addToSyncQueue("refurb_users", "upsert", updated);
   
   // Safe background sync to Supabase (never throws or freezes UI)
-  safeSupabaseExec((sb) => sb.from("refurb_users").upsert(updated));
+  safeSupabaseUpsert("refurb_users", updated);
   return updated;
 };
 
@@ -87,7 +87,7 @@ export const saveCustomer = (customer) => {
   }
   save(KEYS.CUSTOMERS, list);
   addToSyncQueue("refurb_customers", "upsert", updated);
-  safeSupabaseExec((sb) => sb.from("refurb_customers").upsert(updated));
+  safeSupabaseUpsert("refurb_customers", updated);
   return updated;
 };
 
@@ -106,7 +106,7 @@ export const bulkImportCustomers = (newCustomers) => {
   newCustomers.forEach((c) => {
     addToSyncQueue("refurb_customers", "upsert", c);
   });
-  safeSupabaseExec((sb) => sb.from("refurb_customers").upsert(newCustomers));
+  safeSupabaseUpsert("refurb_customers", newCustomers);
   return merged;
 };
 
@@ -130,7 +130,7 @@ export const bulkUpdateCustomers = (customerIds, updates) => {
   });
   save(KEYS.CUSTOMERS, updatedList);
   if (updatedRecords.length > 0) {
-    safeSupabaseExec((sb) => sb.from("refurb_customers").upsert(updatedRecords));
+    safeSupabaseUpsert("refurb_customers", updatedRecords);
   }
   return updatedList;
 };
@@ -197,7 +197,8 @@ export const saveStockOffer = (offer) => {
     list.unshift(updated);
   }
   save(KEYS.STOCK_OFFERS, list);
-  safeSupabaseExec((sb) => sb.from("refurb_stock_offers").upsert(updated));
+  addToSyncQueue("refurb_stock_offers", "upsert", updated);
+  safeSupabaseUpsert("refurb_stock_offers", updated);
   return updated;
 };
 
@@ -227,7 +228,7 @@ export const saveSocialPost = (post) => {
   }
   save(KEYS.SOCIAL_POSTS, list);
   addToSyncQueue("refurb_social_posts", "upsert", updated);
-  safeSupabaseExec((sb) => sb.from("refurb_social_posts").upsert(updated));
+  safeSupabaseUpsert("refurb_social_posts", updated);
   return updated;
 };
 
@@ -257,7 +258,7 @@ export const saveMediaAsset = (asset) => {
   }
   save(KEYS.MEDIA_ASSETS, list);
   addToSyncQueue("refurb_media_assets", "upsert", updated);
-  safeSupabaseExec((sb) => sb.from("refurb_media_assets").upsert(updated));
+  safeSupabaseUpsert("refurb_media_assets", updated);
   return updated;
 };
 
@@ -481,7 +482,7 @@ export const saveTask = (task) => {
   }
   save(KEYS.TASKS, list);
   addToSyncQueue("refurb_tasks", "upsert", updated);
-  safeSupabaseExec((sb) => sb.from("refurb_tasks").upsert(updated));
+  safeSupabaseUpsert("refurb_tasks", updated);
   return updated;
 };
 

@@ -75,6 +75,207 @@ export const safeSupabaseExec = (fn) => {
 };
 
 // ==========================================
+// UNIVERSAL SCHEMA MAPPER & INTEGRITY
+// Maps JavaScript models to PostgreSQL snake_case schema & prevents column errors
+// ==========================================
+
+export const formatRecordForSupabase = (table, r) => {
+  if (!r || typeof r !== "object") return r;
+
+  switch (table) {
+    case "refurb_tasks":
+      return {
+        id: String(r.id),
+        title: r.title || "",
+        assigned_to: r.assigned_to || r.assignedTo || null,
+        assigned_name: r.assigned_name || r.assignedName || null,
+        due_date: r.due_date || r.dueDate || null,
+        priority: r.priority || "Medium",
+        category: r.category || "General",
+        status: r.status || "To Do",
+        notes: r.notes || null,
+        created_at: r.created_at || r.createdAt || new Date().toISOString()
+      };
+
+    case "refurb_media_assets":
+      return {
+        id: String(r.id),
+        title: r.title || "",
+        brand: r.brand || "All Brands",
+        type: r.type || "image",
+        drive_url: r.drive_url || r.driveUrl || "",
+        drive_id: r.drive_id || r.driveId || null,
+        thumbnail: r.thumbnail || null,
+        aspect_ratio: r.aspect_ratio || r.aspectRatio || null,
+        market: r.market || null,
+        tags: Array.isArray(r.tags) ? r.tags : [],
+        description: r.description || null,
+        file_size: r.file_size || r.fileSize || null,
+        uploaded_date: r.uploaded_date || r.uploadedDate || new Date().toISOString().split("T")[0]
+      };
+
+    case "refurb_notifications":
+      return {
+        id: String(r.id),
+        recipient_username: (r.recipient_username || r.recipientUsername || "").toLowerCase(),
+        sender_name: r.sender_name || r.senderName || "Team Member",
+        sender_username: (r.sender_username || r.senderUsername || "user").toLowerCase(),
+        type: r.type || "mention",
+        message: r.message || "",
+        target_type: r.target_type || r.targetType || null,
+        target_id: r.target_id || r.targetId || null,
+        target_title: r.target_title || r.targetTitle || null,
+        target_tab: r.target_tab || r.targetTab || "calendar",
+        read: Boolean(r.read),
+        created_at: r.created_at || r.createdAt || new Date().toISOString()
+      };
+
+    case "refurb_customers":
+      return {
+        id: String(r.id),
+        name: r.name || "",
+        company: r.company || null,
+        type: r.type || "warm",
+        email: r.email || null,
+        phone: r.phone || null,
+        whatsapp: r.whatsapp || null,
+        market: r.market || "USA",
+        location: r.location || null,
+        source: r.source || null,
+        collected_by: r.collected_by || r.collectedBy || null,
+        date_added: r.date_added || r.dateAdded || new Date().toISOString().split("T")[0],
+        preferred_qty: r.preferred_qty || r.preferredQty || null,
+        status: r.status || "Needs Outreach",
+        last_contact_date: r.last_contact_date || r.lastContactDate || null,
+        notes: r.notes || null,
+        deal_value: r.deal_value || r.dealValue || null,
+        created_at: r.created_at || r.createdAt || new Date().toISOString(),
+        updated_at: r.updated_at || r.updatedAt || new Date().toISOString()
+      };
+
+    case "refurb_stock_offers":
+      return {
+        id: String(r.id),
+        brand: r.brand || "",
+        model: r.model || "",
+        specs: r.specs || null,
+        grade: r.grade || "Grade A+",
+        qty_available: Number(r.qty_available ?? r.qtyAvailable ?? 0),
+        min_order_qty: Number(r.min_order_qty ?? r.minOrderQty ?? 1),
+        price_usd: r.price_usd != null ? Number(r.price_usd) : (r.priceUsd != null ? Number(r.priceUsd) : null),
+        price_mxn: r.price_mxn != null ? Number(r.price_mxn) : (r.priceMxn != null ? Number(r.priceMxn) : null),
+        warehouse: r.warehouse || "USA Warehouse",
+        ready_to_ship: Boolean(r.ready_to_ship ?? r.readyToShip ?? true),
+        created_at: r.created_at || r.createdAt || new Date().toISOString()
+      };
+
+    case "refurb_social_posts":
+      return {
+        id: String(r.id),
+        title: r.title || "",
+        market: r.market || "USA",
+        platforms: Array.isArray(r.platforms) ? r.platforms : ["facebook", "instagram"],
+        scheduled_date: r.scheduled_date || r.scheduledDate || new Date().toISOString().split("T")[0],
+        scheduled_time: r.scheduled_time || r.scheduledTime || null,
+        status: r.status || "Draft",
+        assigned_member: r.assigned_member || r.assignedMember || null,
+        caption: r.caption || null,
+        media_url: r.media_url || r.mediaUrl || null,
+        media_type: r.media_type || r.mediaType || "image",
+        notes: r.notes || null,
+        created_at: r.created_at || r.createdAt || new Date().toISOString()
+      };
+
+    case "refurb_users":
+      return {
+        id: String(r.id),
+        username: (r.username || "").toLowerCase(),
+        password: r.password || "",
+        name: r.name || "",
+        role: r.role || "Member",
+        title: r.title || null,
+        email: r.email || null,
+        created_at: r.created_at || r.createdAt || new Date().toISOString(),
+        updated_at: r.updated_at || r.updatedAt || new Date().toISOString()
+      };
+
+    default:
+      return r;
+  }
+};
+
+export const formatRecordFromSupabase = (table, row) => {
+  if (!row || typeof row !== "object") return row;
+  switch (table) {
+    case "refurb_tasks":
+      return {
+        ...row,
+        assignedTo: row.assigned_to || row.assignedTo,
+        assignedName: row.assigned_name || row.assignedName,
+        dueDate: row.due_date || row.dueDate,
+        createdAt: row.created_at || row.createdAt
+      };
+    case "refurb_media_assets":
+      return {
+        ...row,
+        driveUrl: row.drive_url || row.driveUrl,
+        driveId: row.drive_id || row.driveId,
+        aspectRatio: row.aspect_ratio || row.aspectRatio,
+        fileSize: row.file_size || row.fileSize,
+        uploadedDate: row.uploaded_date || row.uploadedDate
+      };
+    case "refurb_notifications":
+      return {
+        ...row,
+        recipientUsername: row.recipient_username || row.recipientUsername,
+        senderName: row.sender_name || row.senderName,
+        senderUsername: row.sender_username || row.senderUsername,
+        targetType: row.target_type || row.targetType,
+        targetId: row.target_id || row.targetId,
+        targetTitle: row.target_title || row.targetTitle,
+        targetTab: row.target_tab || row.targetTab,
+        createdAt: row.created_at || row.createdAt
+      };
+    case "refurb_customers":
+      return {
+        ...row,
+        collectedBy: row.collected_by || row.collectedBy,
+        dateAdded: row.date_added || row.dateAdded,
+        preferredQty: row.preferred_qty || row.preferredQty,
+        lastContactDate: row.last_contact_date || row.lastContactDate,
+        dealValue: row.deal_value || row.dealValue
+      };
+    case "refurb_stock_offers":
+      return {
+        ...row,
+        qtyAvailable: row.qty_available != null ? row.qty_available : row.qtyAvailable,
+        minOrderQty: row.min_order_qty != null ? row.min_order_qty : row.minOrderQty,
+        priceUsd: row.price_usd != null ? row.price_usd : row.priceUsd,
+        priceMxn: row.price_mxn != null ? row.price_mxn : row.priceMxn,
+        readyToShip: row.ready_to_ship != null ? row.ready_to_ship : row.readyToShip
+      };
+    case "refurb_social_posts":
+      return {
+        ...row,
+        scheduledDate: row.scheduled_date || row.scheduledDate,
+        scheduledTime: row.scheduled_time || row.scheduledTime,
+        assignedMember: row.assigned_member || row.assignedMember,
+        mediaUrl: row.media_url || row.mediaUrl,
+        mediaType: row.media_type || row.mediaType
+      };
+    default:
+      return row;
+  }
+};
+
+export const safeSupabaseUpsert = (table, record) => {
+  const clean = Array.isArray(record)
+    ? record.map(r => formatRecordForSupabase(table, r))
+    : formatRecordForSupabase(table, record);
+  safeSupabaseExec((sb) => sb.from(table).upsert(clean));
+};
+
+// ==========================================
 // RESILIENT OFFLINE QUEUE & DATA INTEGRITY
 // ==========================================
 
@@ -103,35 +304,43 @@ export const flushSyncQueue = async () => {
     const remaining = [];
     for (const item of queue) {
       try {
-        let recordToUpsert = item.record;
-        if (item.table === "refurb_notifications") {
-          recordToUpsert = {
-            id: item.record.id,
-            recipient_username: (item.record.recipient_username || item.record.recipientUsername || "").toLowerCase(),
-            sender_name: item.record.sender_name || item.record.senderName || "Team Member",
-            sender_username: item.record.sender_username || item.record.senderUsername || "user",
-            type: item.record.type || "mention",
-            message: item.record.message,
-            target_type: item.record.target_type || item.record.targetType || "",
-            target_id: item.record.target_id || item.record.targetId || "",
-            target_title: item.record.target_title || item.record.targetTitle || "",
-            target_tab: item.record.target_tab || item.record.targetTab || "calendar",
-            read: !!item.record.read,
-            created_at: item.record.created_at || item.record.createdAt || new Date().toISOString()
-          };
-        }
-
         if (item.action === "upsert") {
-          const { error } = await supabase.from(item.table).upsert(recordToUpsert);
+          // Format the record to guarantee 100% PostgreSQL snake_case column compliance
+          const cleanRecord = formatRecordForSupabase(item.table, item.record);
+          const { error } = await supabase.from(item.table).upsert(cleanRecord);
+
           if (error) {
-            console.warn(`Sync retry queued for ${item.table}:`, error.message);
-            remaining.push(item);
+            console.warn(`Sync notice for ${item.table}:`, error.message);
+            const isMissingTable = error.message?.includes("does not exist") || error.code === "42P01";
+            const retries = (item.retryCount || 0) + 1;
+
+            // If the table does not exist in Supabase after 2 retries, drop it from active queue
+            // so the sync queue never stays stuck
+            if (isMissingTable && retries >= 2) {
+              console.warn(`Table '${item.table}' does not exist in Supabase yet. Dropped from pending queue.`);
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(new CustomEvent("minztech_table_missing", { detail: { table: item.table } }));
+              }
+            } else {
+              remaining.push({
+                ...item,
+                record: cleanRecord,
+                retryCount: retries,
+                lastError: isMissingTable 
+                  ? `Table '${item.table}' not created in Supabase yet. Run the SQL schema script.`
+                  : error.message
+              });
+            }
           }
         } else if (item.action === "delete") {
           const { error } = await supabase.from(item.table).delete().eq("id", item.record.id);
           if (error) {
-            console.warn(`Delete retry queued for ${item.table}:`, error.message);
-            remaining.push(item);
+            console.warn(`Delete notice for ${item.table}:`, error.message);
+            const isMissingTable = error.message?.includes("does not exist") || error.code === "42P01";
+            const retries = (item.retryCount || 0) + 1;
+            if (!isMissingTable || retries < 2) {
+              remaining.push({ ...item, retryCount: retries, lastError: error.message });
+            }
           }
         }
       } catch (err) {
@@ -158,11 +367,14 @@ export const triggerAutoFlush = () => {
 
 export const addToSyncQueue = (table, action, record) => {
   const queue = getSyncQueue();
+  // Format record immediately so the queue only ever stores clean, valid schema rows
+  const cleanRecord = action === "upsert" ? formatRecordForSupabase(table, record) : record;
+
   const queueItem = {
     id: `sync_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     table,
     action, // 'upsert' | 'delete'
-    record,
+    record: cleanRecord,
     timestamp: new Date().toISOString(),
   };
   queue.push(queueItem);
@@ -335,31 +547,8 @@ export const syncAllDataWithSupabase = async (localData, setSyncStatus) => {
 
   try {
     // 1. Process sync queue (all offline changes)
-    const queue = getSyncQueue();
-    const failedItems = [];
-
-    for (const item of queue) {
-      try {
-        if (item.action === "upsert") {
-          const { error } = await supabase.from(item.table).upsert(item.record);
-          if (error) {
-            console.error(`Error syncing ${item.table}:`, error);
-            failedItems.push(item);
-          }
-        } else if (item.action === "delete") {
-          const { error } = await supabase.from(item.table).delete().eq("id", item.record.id);
-          if (error) {
-            console.error(`Error deleting from ${item.table}:`, error);
-            failedItems.push(item);
-          }
-        }
-      } catch (err) {
-        failedItems.push(item);
-      }
-    }
-
-    // Save remaining failed items (if any)
-    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(failedItems));
+    await flushSyncQueue();
+    const remainingQueue = getSyncQueue();
 
     // 2. Full synchronization of core tables (Bulk upsert to ensure everything is saved)
     const tablesToSync = [
@@ -371,11 +560,16 @@ export const syncAllDataWithSupabase = async (localData, setSyncStatus) => {
       { name: "refurb_tasks", data: localData.tasks },
     ];
 
+    const missingTables = [];
     for (const tbl of tablesToSync) {
       if (tbl.data && tbl.data.length > 0) {
-        const { error } = await supabase.from(tbl.name).upsert(tbl.data, { onConflict: "id" });
+        const cleanRows = tbl.data.map(item => formatRecordForSupabase(tbl.name, item));
+        const { error } = await supabase.from(tbl.name).upsert(cleanRows, { onConflict: "id" });
         if (error) {
           console.warn(`Table ${tbl.name} sync note:`, error.message);
+          if (error.message?.includes("does not exist") || error.code === "42P01") {
+            missingTables.push(tbl.name);
+          }
         }
       }
     }
@@ -385,27 +579,32 @@ export const syncAllDataWithSupabase = async (localData, setSyncStatus) => {
     for (const tbl of tablesToSync) {
       const { data, error } = await supabase.from(tbl.name).select("*");
       if (!error && data && data.length > 0) {
-        cloudUpdates[tbl.name] = data;
+        cloudUpdates[tbl.name] = data.map(row => formatRecordFromSupabase(tbl.name, row));
       }
     }
 
     const now = new Date().toISOString();
     localStorage.setItem(LAST_SYNC_KEY, now);
 
+    let statusMsg = "Successfully synchronized with Supabase cloud database!";
+    if (missingTables.length > 0) {
+      statusMsg = `Sync finished. Warning: Table(s) ${missingTables.join(", ")} do not exist in Supabase yet. Please run the SQL schema in Supabase.`;
+    }
+
     if (setSyncStatus) {
       setSyncStatus({ 
-        status: "synced", 
+        status: missingTables.length > 0 ? "error" : "synced", 
         lastSynced: now, 
-        message: "Successfully synchronized with Supabase cloud database!" 
+        message: statusMsg
       });
     }
 
     return {
-      success: true,
+      success: missingTables.length === 0,
       lastSynced: now,
       cloudUpdates,
-      pendingQueue: failedItems.length,
-      message: "Sync completed smoothly without data loss."
+      pendingQueue: remainingQueue.length,
+      message: statusMsg
     };
   } catch (err) {
     console.error("Sync failed:", err);
