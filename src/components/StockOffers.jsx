@@ -162,11 +162,11 @@ export default function StockOffers({ setActiveTab }) {
 
       {/* Filters & Search */}
       <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        {/* Brand tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 bg-brand-dark p-1.5 rounded-xl border border-brand-border text-xs">
+        {/* Brand tabs - Horizontally scrollable row on mobile instead of multiple wrapped lines */}
+        <div className="flex items-center gap-1.5 bg-brand-dark p-1.5 rounded-xl border border-brand-border text-xs overflow-x-auto no-scrollbar flex-nowrap w-full lg:w-auto shrink-0">
           <button
             onClick={() => setBrandFilter("all")}
-            className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
+            className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg capitalize transition-all ${
               brandFilter === "all" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"
             }`}
           >
@@ -176,7 +176,7 @@ export default function StockOffers({ setActiveTab }) {
             <button
               key={b}
               onClick={() => setBrandFilter(b)}
-              className={`px-3 py-1.5 rounded-lg capitalize transition-all ${
+              className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg capitalize transition-all ${
                 brandFilter.toLowerCase() === b.toLowerCase() ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"
               }`}
             >
@@ -184,10 +184,10 @@ export default function StockOffers({ setActiveTab }) {
             </button>
           ))}
           {customBrands.map((b) => (
-            <div key={b} className="relative group/custom inline-flex items-center">
+            <div key={b} className="relative group/custom inline-flex items-center shrink-0">
               <button
                 onClick={() => setBrandFilter(b)}
-                className={`px-3 py-1.5 rounded-lg capitalize transition-all flex items-center gap-1.5 ${
+                className={`shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg capitalize transition-all flex items-center gap-1.5 ${
                   brandFilter.toLowerCase() === b.toLowerCase() 
                     ? "bg-brand-neon text-brand-black font-bold" 
                     : "text-gray-300 hover:text-white bg-brand-surface/70 border border-brand-border/60"
@@ -207,7 +207,7 @@ export default function StockOffers({ setActiveTab }) {
 
           {/* Dynamic Brand Adder */}
           {isAddingBrand ? (
-            <form onSubmit={handleAddCustomBrand} className="flex items-center gap-1">
+            <form onSubmit={handleAddCustomBrand} className="flex items-center gap-1 shrink-0">
               <input
                 type="text"
                 autoFocus
@@ -233,7 +233,7 @@ export default function StockOffers({ setActiveTab }) {
           ) : (
             <button
               onClick={() => setIsAddingBrand(true)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dashed border-brand-border hover:border-brand-neon text-gray-400 hover:text-brand-neon transition-colors text-xs font-semibold"
+              className="shrink-0 whitespace-nowrap flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-dashed border-brand-border hover:border-brand-neon text-gray-400 hover:text-brand-neon transition-colors text-xs font-semibold"
               title="Add a custom brand (Apple, Asus, Acer, Microsoft, etc.)"
             >
               <Plus className="w-3.5 h-3.5" />
@@ -242,32 +242,33 @@ export default function StockOffers({ setActiveTab }) {
           )}
         </div>
 
-        {/* Warehouse Filter */}
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-gray-400">Warehouse:</span>
-          <select
-            value={warehouseFilter}
-            onChange={(e) => setWarehouseFilter(e.target.value)}
-            className="px-3 py-1.5 bg-brand-dark border border-brand-border rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-brand-neon font-medium"
-          >
-            <option value="all">All Warehouses</option>
-            <option value="USA">🇺🇸 USA Texas</option>
-            <option value="Mexico">🇲🇽 Mexico Guadalajara</option>
-            <option value="Dubai">🇦🇪 Dubai Warehouse (UAE)</option>
-            <option value="Miami">🇺🇸 Miami Warehouse (Florida)</option>
-          </select>
-        </div>
+        {/* Warehouse Filter & Search Controls */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto flex-1 justify-end">
+          <div className="flex items-center gap-2 text-xs shrink-0">
+            <span className="text-gray-400 font-medium shrink-0">Warehouse:</span>
+            <select
+              value={warehouseFilter}
+              onChange={(e) => setWarehouseFilter(e.target.value)}
+              className="flex-1 sm:flex-none px-3 py-1.5 bg-brand-dark border border-brand-border rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-brand-neon font-medium"
+            >
+              <option value="all">All Warehouses</option>
+              <option value="USA">🇺🇸 USA Texas</option>
+              <option value="Mexico">🇲🇽 Mexico Guadalajara</option>
+              <option value="Dubai">🇦🇪 Dubai Warehouse (UAE)</option>
+              <option value="Miami">🇺🇸 Miami Warehouse (Florida)</option>
+            </select>
+          </div>
 
-        {/* Search */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search model or specs..."
-            className="w-full pl-9 pr-3 py-1.5 bg-brand-dark border border-brand-border rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-neon"
-          />
+          <div className="relative flex-1 min-w-[180px]">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search model or specs..."
+              className="w-full pl-9 pr-3 py-1.5 bg-brand-dark border border-brand-border rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-brand-neon"
+            />
+          </div>
         </div>
       </div>
 
@@ -276,34 +277,41 @@ export default function StockOffers({ setActiveTab }) {
         {filteredStock.map((item) => (
           <div 
             key={item.id} 
-            className="bg-brand-surface border border-brand-border hover:border-brand-neon/40 rounded-2xl p-6 shadow-md space-y-4 flex flex-col justify-between transition-all"
+            className="bg-brand-surface border border-brand-border hover:border-brand-neon/40 rounded-2xl p-5 sm:p-6 shadow-md space-y-4 flex flex-col justify-between transition-all"
           >
             <div>
-              {/* Header: Brand, Model, Edit/Delete */}
+              {/* Header: Brand, Model, Grade, Edit/Delete */}
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
                     <span className="px-2.5 py-0.5 rounded-md bg-brand-dark text-brand-neon font-bold text-xs uppercase border border-brand-border">
                       {item.brand}
                     </span>
-                    <span className="text-xs text-brand-lime font-medium flex items-center gap-1">
-                      <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>{item.grade}</span>
-                    </span>
+                    {item.readyToShip && (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-950/60 text-emerald-300 font-semibold text-[10px] border border-emerald-500/30">
+                        Ready to Ship
+                      </span>
+                    )}
                   </div>
-                  <h3 className="text-lg font-bold text-white mt-1">{item.model}</h3>
+                  <h3 className="text-base sm:text-lg font-bold text-white leading-snug">{item.model}</h3>
+                  <div className="text-xs text-brand-lime font-medium flex items-center gap-1.5 mt-1">
+                    <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{item.grade}</span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => handleOpenEdit(item)}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-brand-neon hover:bg-brand-dark transition-colors"
+                    title="Edit stock lot"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDelete(item.id)}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-brand-dark transition-colors"
+                    title="Delete stock lot"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

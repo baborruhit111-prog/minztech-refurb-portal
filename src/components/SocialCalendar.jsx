@@ -41,6 +41,33 @@ export default function SocialCalendar() {
     setPosts(getSocialPosts());
   };
 
+  useEffect(() => {
+    const handleRefresh = (e) => {
+      if (!e.detail || e.detail.type === "social_posts") {
+        setPosts(getSocialPosts());
+      }
+    };
+
+    const handleFocus = (e) => {
+      if (e.detail && e.detail.targetId) {
+        const id = e.detail.targetId;
+        setExpandedComments(prev => ({ ...prev, [id]: true }));
+        setTimeout(() => {
+          const el = document.getElementById(`social_post_${id}`);
+          if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 200);
+      }
+    };
+
+    window.addEventListener("minztech_data_refreshed", handleRefresh);
+    window.addEventListener("minztech_focus_content", handleFocus);
+
+    return () => {
+      window.removeEventListener("minztech_data_refreshed", handleRefresh);
+      window.removeEventListener("minztech_focus_content", handleFocus);
+    };
+  }, []);
+
   const filteredPosts = posts.filter(post => {
     if (marketTab !== "all" && post.market !== marketTab && post.market !== "Both") return false;
     if (statusFilter !== "all" && post.status !== statusFilter) return false;
@@ -164,11 +191,11 @@ export default function SocialCalendar() {
       {/* Market Selector & Filters */}
       <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 space-y-4">
         {/* Market Tabs */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border text-xs font-medium">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+          <div className="w-full lg:w-auto overflow-x-auto no-scrollbar flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border text-xs font-medium shrink-0">
             <button
               onClick={() => setMarketTab("all")}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg transition-all ${
                 marketTab === "all" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"
               }`}
             >
@@ -176,7 +203,7 @@ export default function SocialCalendar() {
             </button>
             <button
               onClick={() => setMarketTab("USA")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
                 marketTab === "USA" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"
               }`}
             >
@@ -184,7 +211,7 @@ export default function SocialCalendar() {
             </button>
             <button
               onClick={() => setMarketTab("LATAM")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
                 marketTab === "LATAM" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"
               }`}
             >
@@ -193,14 +220,14 @@ export default function SocialCalendar() {
           </div>
 
           {/* Platform Filters */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-400">Platform:</span>
+          <div className="flex items-center gap-2 text-xs shrink-0">
+            <span className="text-gray-400 font-medium">Platform:</span>
             <div className="flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border">
               {["all", "facebook", "instagram", "tiktok"].map((p) => (
                 <button
                   key={p}
                   onClick={() => setPlatformFilter(p)}
-                  className={`px-2.5 py-1 rounded-lg capitalize ${
+                  className={`px-2.5 py-1 rounded-lg capitalize shrink-0 ${
                     platformFilter === p ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400"
                   }`}
                 >
@@ -212,13 +239,13 @@ export default function SocialCalendar() {
         </div>
 
         {/* Status Filters Bar (Published, Ready to Post, Draft, Idea) */}
-        <div className="pt-3 border-t border-brand-border/60 flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-gray-400 font-semibold">Post Status:</span>
-            <div className="flex flex-wrap items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border">
+        <div className="pt-3 border-t border-brand-border/60 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 w-full">
+            <span className="text-gray-400 font-semibold shrink-0">Post Status:</span>
+            <div className="w-full sm:w-auto overflow-x-auto no-scrollbar flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border shrink-0">
               <button
                 onClick={() => setStatusFilter("all")}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-lg transition-all ${
                   statusFilter === "all" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"
                 }`}
               >
@@ -226,7 +253,7 @@ export default function SocialCalendar() {
               </button>
               <button
                 onClick={() => setStatusFilter("Published")}
-                className={`flex items-center gap-1 px-3 py-1 rounded-lg transition-all ${
+                className={`shrink-0 whitespace-nowrap flex items-center gap-1 px-3 py-1 rounded-lg transition-all ${
                   statusFilter === "Published" 
                     ? "bg-emerald-500 text-white font-bold" 
                     : "text-emerald-400 hover:text-emerald-300"
@@ -237,7 +264,7 @@ export default function SocialCalendar() {
               </button>
               <button
                 onClick={() => setStatusFilter("Ready to Post")}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-lg transition-all ${
                   statusFilter === "Ready to Post" 
                     ? "bg-brand-neon text-brand-black font-bold" 
                     : "text-brand-lime hover:text-brand-neon"
@@ -247,7 +274,7 @@ export default function SocialCalendar() {
               </button>
               <button
                 onClick={() => setStatusFilter("Draft")}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-lg transition-all ${
                   statusFilter === "Draft" 
                     ? "bg-brand-surface text-white font-bold" 
                     : "text-gray-400 hover:text-white"
@@ -257,13 +284,13 @@ export default function SocialCalendar() {
               </button>
               <button
                 onClick={() => setStatusFilter("Idea")}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`shrink-0 whitespace-nowrap px-3 py-1 rounded-lg transition-all ${
                   statusFilter === "Idea" 
-                    ? "bg-brand-surface text-white font-bold" 
+                    ? "bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30" 
                     : "text-gray-400 hover:text-white"
                 }`}
               >
-                Idea
+                Idea / Inspiration
               </button>
             </div>
           </div>
@@ -285,16 +312,22 @@ export default function SocialCalendar() {
         ) : (
           filteredPosts.map((post) => {
             const isPublished = post.status === "Published";
+            const hasComments = (post.comments || []).length > 0;
+            const isCommentsOpen = expandedComments[post.id] !== undefined 
+              ? expandedComments[post.id] 
+              : hasComments;
+
             return (
               <div 
                 key={post.id} 
-                className={`bg-brand-surface border rounded-2xl p-5 shadow-sm space-y-3 transition-all ${
+                id={`social_post_${post.id}`}
+                className={`bg-brand-surface border rounded-2xl p-4 sm:p-5 shadow-sm space-y-3 transition-all ${
                   isPublished 
                     ? "border-emerald-500/40 bg-brand-surface/90" 
                     : "border-brand-border hover:border-brand-neon/40"
                 }`}
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                       post.market === "LATAM" 
@@ -324,44 +357,46 @@ export default function SocialCalendar() {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400 mr-1">Assigned: <strong className="text-gray-200">{post.assignedMember}</strong></span>
+                  <div className="flex items-center justify-between sm:justify-end gap-2 pt-1 sm:pt-0 border-t sm:border-t-0 border-brand-border/40">
+                    <span className="text-xs text-gray-400 mr-1 truncate">Assigned: <strong className="text-gray-200">{post.assignedMember}</strong></span>
                     
-                    {/* 1-Click Mark as Published / Revert Button */}
-                    <button
-                      onClick={() => handleTogglePublished(post)}
-                      className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
-                        isPublished 
-                          ? "bg-brand-dark hover:bg-amber-500/20 text-gray-300 hover:text-amber-300 border border-brand-border" 
-                          : "bg-emerald-500 hover:bg-emerald-400 text-white shadow-sm"
-                      }`}
-                      title={isPublished ? "Revert to Ready to Post" : "Mark as Published to social media"}
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{isPublished ? "Unpublish" : "Mark Published"}</span>
-                    </button>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                      {/* 1-Click Mark as Published / Revert Button */}
+                      <button
+                        onClick={() => handleTogglePublished(post)}
+                        className={`flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          isPublished 
+                            ? "bg-brand-dark hover:bg-amber-500/20 text-gray-300 hover:text-amber-300 border border-brand-border" 
+                            : "bg-emerald-500 hover:bg-emerald-400 text-white shadow-sm"
+                        }`}
+                        title={isPublished ? "Revert to Ready to Post" : "Mark as Published to social media"}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>{isPublished ? "Unpublish" : "Published"}</span>
+                      </button>
 
-                    <button
-                      onClick={() => handleOpenEdit(post)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-brand-neon hover:bg-brand-dark"
-                      title="Edit post"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(post.id)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-brand-dark"
-                      title="Delete post"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <button
+                        onClick={() => handleOpenEdit(post)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand-neon hover:bg-brand-dark border border-brand-border/60 sm:border-transparent"
+                        title="Edit post"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(post.id)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-brand-dark border border-brand-border/60 sm:border-transparent"
+                        title="Delete post"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Title & Platforms */}
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-base font-bold text-white">{post.title}</h3>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-wrap">
                     {(post.platforms || []).map((p) => (
                       <span 
                         key={p} 
@@ -402,24 +437,24 @@ export default function SocialCalendar() {
                 <div className="pt-2 border-t border-brand-border/40">
                   <button
                     onClick={() => toggleComments(post.id)}
-                    className={`w-full py-1.5 px-3 rounded-xl text-[11px] font-semibold flex items-center justify-between transition-colors ${
-                      expandedComments[post.id] 
+                    className={`w-full py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-between transition-colors ${
+                      isCommentsOpen 
                         ? "bg-brand-dark text-brand-neon border border-brand-neon/30" 
-                        : "bg-brand-dark/60 hover:bg-brand-dark text-gray-400 hover:text-gray-200 border border-brand-border/40"
+                        : "bg-brand-dark/60 hover:bg-brand-dark text-gray-300 hover:text-white border border-brand-border/40"
                     }`}
                   >
                     <span className="flex items-center gap-1.5">
-                      <MessageSquare className="w-3.5 h-3.5 text-brand-lime" />
+                      <MessageSquare className="w-4 h-4 text-brand-lime" />
                       <span>Modification Comments & Team Mentions</span>
                     </span>
-                    <span className={`px-1.5 py-0.2 rounded-full font-mono text-[10px] ${
-                      (post.comments || []).length > 0 ? "bg-brand-neon text-black font-bold" : "bg-brand-surface text-gray-500"
+                    <span className={`px-2 py-0.5 rounded-full font-mono text-[10px] font-bold ${
+                      hasComments ? "bg-brand-neon text-black" : "bg-brand-surface text-gray-500"
                     }`}>
-                      {(post.comments || []).length}
+                      {(post.comments || []).length} {hasComments ? 'Comments' : 'Comments'}
                     </span>
                   </button>
 
-                  {expandedComments[post.id] && (
+                  {isCommentsOpen && (
                     <CommentsThread
                       comments={post.comments || []}
                       onSaveComments={(updated) => handleUpdateComments(post.id, updated)}

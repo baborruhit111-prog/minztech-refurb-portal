@@ -38,7 +38,7 @@ export default function CustomersCRM() {
   const [selectedIds, setSelectedIds] = useState(new Set());
 
   // Column Filtering System
-  const [isFilterBarOpen, setIsFilterBarOpen] = useState(true);
+  const [isFilterBarOpen, setIsFilterBarOpen] = useState(false);
   const [columnFilters, setColumnFilters] = useState({
     name: "",
     market: "all",
@@ -750,7 +750,7 @@ Marco Rossi,Guadalajara Electro Mayoreo,marco@gdlmayoreo.com,+52 33 9876 5432,LA
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Customer Outreach & Lists</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Customer Outreach & Lists</h1>
             <span className="px-2.5 py-0.5 rounded-full bg-brand-surface border border-brand-border text-xs text-brand-neon font-mono font-bold">
               {filteredCustomers.length} Records
             </span>
@@ -760,65 +760,70 @@ Marco Rossi,Guadalajara Electro Mayoreo,marco@gdlmayoreo.com,+52 33 9876 5432,LA
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Column Filters Toggle Button */}
-          <button
-            onClick={() => setIsFilterBarOpen(!isFilterBarOpen)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
-              isFilterBarOpen || hasActiveFilters
-                ? "bg-brand-neon/15 text-brand-neon border-brand-neon/40"
-                : "bg-brand-surface hover:bg-brand-hover text-gray-300 border-brand-border"
-            }`}
-            title="Toggle individual column filters"
-          >
-            <Filter className="w-3.5 h-3.5" />
-            <span>Column Filters</span>
-            {hasActiveFilters && (
-              <span className="w-2 h-2 rounded-full bg-brand-neon animate-pulse"></span>
-            )}
-          </button>
-
-          {/* Bulk Import CSV Button */}
-          <button
-            onClick={() => {
-              setImportStep(1);
-              setIsBulkImportModalOpen(true);
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand-surface hover:bg-brand-hover text-gray-200 hover:text-white border border-brand-border text-xs font-semibold rounded-xl transition-colors"
-            title="Bulk import customers with column mapping"
-          >
-            <Upload className="w-3.5 h-3.5 text-brand-neon" />
-            <span>Bulk Import</span>
-          </button>
-
-          {/* Export CSV */}
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 bg-brand-surface hover:bg-brand-hover text-gray-300 hover:text-white border border-brand-border text-xs font-semibold rounded-xl transition-colors"
-          >
-            <Download className="w-3.5 h-3.5 text-brand-lime" />
-            <span>Export CSV</span>
-          </button>
-
-          {/* Add Customer */}
+        {/* Primary and secondary action buttons */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          {/* Add Customer - full width prominent on mobile */}
           <button
             onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-4 py-2 bg-brand-neon hover:bg-brand-lime text-brand-black text-xs font-bold rounded-xl shadow-md transition-all active:scale-95"
+            className="order-1 sm:order-last flex items-center justify-center gap-1.5 px-4 py-2.5 bg-brand-neon hover:bg-brand-lime text-brand-black text-xs font-extrabold rounded-xl shadow-md transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Add Customer</span>
           </button>
+
+          {/* 3 Secondary buttons in balanced 3-col grid on mobile, flex on desktop */}
+          <div className="grid grid-cols-3 sm:flex items-center gap-2 order-2 sm:order-first">
+            {/* Column Filters Toggle Button */}
+            <button
+              onClick={() => setIsFilterBarOpen(!isFilterBarOpen)}
+              className={`flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
+                isFilterBarOpen || hasActiveFilters
+                  ? "bg-brand-neon/15 text-brand-neon border-brand-neon/40"
+                  : "bg-brand-surface hover:bg-brand-hover text-gray-300 border-brand-border"
+              }`}
+              title="Toggle individual column filters"
+            >
+              <Filter className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Filters</span>
+              {hasActiveFilters && (
+                <span className="w-2 h-2 rounded-full bg-brand-neon animate-pulse shrink-0"></span>
+              )}
+            </button>
+
+            {/* Bulk Import CSV Button */}
+            <button
+              onClick={() => {
+                setImportStep(1);
+                setIsBulkImportModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-brand-surface hover:bg-brand-hover text-gray-200 hover:text-white border border-brand-border text-xs font-semibold rounded-xl transition-colors"
+              title="Bulk import customers with column mapping"
+            >
+              <Upload className="w-3.5 h-3.5 text-brand-neon shrink-0" />
+              <span className="truncate">Import</span>
+            </button>
+
+            {/* Export CSV */}
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 bg-brand-surface hover:bg-brand-hover text-gray-300 hover:text-white border border-brand-border text-xs font-semibold rounded-xl transition-colors"
+              title="Export filtered customers to CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-brand-lime shrink-0" />
+              <span className="truncate">Export</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main Filter & Global Search Card */}
       <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 space-y-4 shadow-sm">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          {/* Segment Tabs */}
-          <div className="flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border text-xs font-medium">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          {/* Segment Tabs - Smooth Horizontal Scroll on Mobile */}
+          <div className="w-full lg:w-auto overflow-x-auto no-scrollbar flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border text-xs font-medium shrink-0">
             <button
               onClick={() => setActiveTab("all")}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg transition-all ${
                 activeTab === "all" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"
               }`}
             >
@@ -826,7 +831,7 @@ Marco Rossi,Guadalajara Electro Mayoreo,marco@gdlmayoreo.com,+52 33 9876 5432,LA
             </button>
             <button
               onClick={() => setActiveTab("warm")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
                 activeTab === "warm" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"
               }`}
             >
@@ -835,7 +840,7 @@ Marco Rossi,Guadalajara Electro Mayoreo,marco@gdlmayoreo.com,+52 33 9876 5432,LA
             </button>
             <button
               onClick={() => setActiveTab("cold")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
+              className={`shrink-0 whitespace-nowrap flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
                 activeTab === "cold" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"
               }`}
             >
@@ -844,34 +849,36 @@ Marco Rossi,Guadalajara Electro Mayoreo,marco@gdlmayoreo.com,+52 33 9876 5432,LA
             </button>
           </div>
 
-          {/* Quick Market Filter Tabs */}
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-gray-400">Market:</span>
-            <div className="flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border">
-              <button
-                onClick={() => setMarketFilter("all")}
-                className={`px-2.5 py-1 rounded-lg ${
-                  marketFilter === "all" ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400"
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setMarketFilter("USA")}
-                className={`px-2.5 py-1 rounded-lg ${
-                  marketFilter === "USA" ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400"
-                }`}
-              >
-                🇺🇸 USA
-              </button>
-              <button
-                onClick={() => setMarketFilter("LATAM")}
-                className={`px-2.5 py-1 rounded-lg ${
-                  marketFilter === "LATAM" ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400"
-                }`}
-              >
-                🇲🇽 Mexico
-              </button>
+          {/* Quick Market Filter Tabs & View Mode Switcher */}
+          <div className="w-full lg:w-auto flex flex-wrap sm:flex-nowrap items-center justify-between lg:justify-end gap-2 text-xs">
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400 text-[11px] font-medium shrink-0">Market:</span>
+              <div className="flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border">
+                <button
+                  onClick={() => setMarketFilter("all")}
+                  className={`px-2.5 py-1 rounded-lg shrink-0 ${
+                    marketFilter === "all" ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400"
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setMarketFilter("USA")}
+                  className={`px-2.5 py-1 rounded-lg shrink-0 ${
+                    marketFilter === "USA" ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400"
+                  }`}
+                >
+                  🇺🇸 USA
+                </button>
+                <button
+                  onClick={() => setMarketFilter("LATAM")}
+                  className={`px-2.5 py-1 rounded-lg shrink-0 ${
+                    marketFilter === "LATAM" ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400"
+                  }`}
+                >
+                  🇲🇽 Mexico
+                </button>
+              </div>
             </div>
 
             {/* View Mode Switcher: Auto vs Table vs Cards */}
@@ -913,11 +920,11 @@ Marco Rossi,Guadalajara Electro Mayoreo,marco@gdlmayoreo.com,+52 33 9876 5432,LA
             {hasActiveFilters && (
               <button
                 onClick={clearAllFilters}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-brand-dark hover:bg-red-950/40 text-red-400 text-xs border border-brand-border transition-colors ml-2"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-brand-dark hover:bg-red-950/40 text-red-400 text-xs border border-brand-border transition-colors shrink-0"
                 title="Reset all filters"
               >
                 <RefreshCw className="w-3 h-3" />
-                <span>Reset Filters</span>
+                <span>Reset</span>
               </button>
             )}
           </div>

@@ -292,6 +292,54 @@ export const deleteMediaAsset = (id) => {
   safeSupabaseExec((sb) => sb.from("refurb_media_assets").delete().eq("id", id));
 };
 
+// Sync remote social posts & comments into local cache
+export const syncRemoteSocialPostsToLocal = (remotePosts) => {
+  if (!Array.isArray(remotePosts) || remotePosts.length === 0) return;
+  const current = getSocialPosts();
+  const map = new Map();
+  current.forEach(p => map.set(p.id, p));
+  remotePosts.forEach(rp => {
+    const formatted = {
+      ...rp,
+      scheduledDate: rp.scheduled_date || rp.scheduledDate,
+      scheduledTime: rp.scheduled_time || rp.scheduledTime,
+      assignedMember: rp.assigned_member || rp.assignedMember,
+      mediaUrl: rp.media_url || rp.mediaUrl,
+      mediaType: rp.media_type || rp.mediaType,
+      comments: Array.isArray(rp.comments) ? rp.comments : (map.get(rp.id)?.comments || [])
+    };
+    map.set(formatted.id, { ...(map.get(formatted.id) || {}), ...formatted });
+  });
+  save(KEYS.SOCIAL_POSTS, Array.from(map.values()));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("minztech_data_refreshed", { detail: { type: "social_posts" } }));
+  }
+};
+
+// Sync remote media assets & comments into local cache
+export const syncRemoteMediaAssetsToLocal = (remoteAssets) => {
+  if (!Array.isArray(remoteAssets) || remoteAssets.length === 0) return;
+  const current = getMediaAssets();
+  const map = new Map();
+  current.forEach(m => map.set(m.id, m));
+  remoteAssets.forEach(ra => {
+    const formatted = {
+      ...ra,
+      driveUrl: ra.drive_url || ra.driveUrl,
+      driveId: ra.drive_id || ra.driveId,
+      aspectRatio: ra.aspect_ratio || ra.aspectRatio,
+      fileSize: ra.file_size || ra.fileSize,
+      uploadedDate: ra.uploaded_date || ra.uploadedDate,
+      comments: Array.isArray(ra.comments) ? ra.comments : (map.get(ra.id)?.comments || [])
+    };
+    map.set(formatted.id, { ...(map.get(formatted.id) || {}), ...formatted });
+  });
+  save(KEYS.MEDIA_ASSETS, Array.from(map.values()));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("minztech_data_refreshed", { detail: { type: "media_assets" } }));
+  }
+};
+
 // Helper: Google Drive API Key storage
 const GDRIVE_API_KEY_STORAGE = "minztech_gdrive_api_key";
 export const getGoogleDriveApiKey = () => localStorage.getItem(GDRIVE_API_KEY_STORAGE) || (typeof import.meta !== "undefined" && import.meta.env?.VITE_GOOGLE_DRIVE_API_KEY) || "";

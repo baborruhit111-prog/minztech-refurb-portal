@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { 
   CheckSquare, 
   Plus, 
@@ -131,41 +131,41 @@ export default function TasksManager() {
 
       {/* Filters */}
       <div className="bg-brand-surface border border-brand-border rounded-2xl p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        {/* Status filter */}
-        <div className="flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border text-xs">
+        {/* Status filter - Single scrollable row on mobile */}
+        <div className="w-full md:w-auto overflow-x-auto no-scrollbar flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border text-xs shrink-0">
           <button
             onClick={() => setStatusFilter("all")}
-            className={`px-3 py-1.5 rounded-lg ${statusFilter === "all" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400"}`}
+            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg transition-all ${statusFilter === "all" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"}`}
           >
             All Tasks ({tasks.length})
           </button>
           <button
             onClick={() => setStatusFilter("To Do")}
-            className={`px-3 py-1.5 rounded-lg ${statusFilter === "To Do" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400"}`}
+            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg transition-all ${statusFilter === "To Do" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"}`}
           >
             To Do
           </button>
           <button
             onClick={() => setStatusFilter("In Progress")}
-            className={`px-3 py-1.5 rounded-lg ${statusFilter === "In Progress" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400"}`}
+            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg transition-all ${statusFilter === "In Progress" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"}`}
           >
             In Progress
           </button>
           <button
             onClick={() => setStatusFilter("Completed")}
-            className={`px-3 py-1.5 rounded-lg ${statusFilter === "Completed" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400"}`}
+            className={`shrink-0 whitespace-nowrap px-3.5 py-1.5 rounded-lg transition-all ${statusFilter === "Completed" ? "bg-brand-neon text-brand-black font-bold" : "text-gray-400 hover:text-white"}`}
           >
             Completed
           </button>
         </div>
 
         {/* Member filter */}
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-gray-400">Assigned Member:</span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs w-full md:w-auto">
+          <span className="text-gray-400 font-medium shrink-0">Assigned Member:</span>
           <select
             value={memberFilter}
             onChange={(e) => setMemberFilter(e.target.value)}
-            className="px-3 py-1.5 bg-brand-dark border border-brand-border rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-brand-neon"
+            className="w-full sm:w-auto px-3 py-1.5 bg-brand-dark border border-brand-border rounded-xl text-white focus:outline-none focus:ring-1 focus:ring-brand-neon font-medium"
           >
             <option value="all">All Team Members</option>
             {users.map(u => (
@@ -189,15 +189,15 @@ export default function TasksManager() {
             return (
               <div 
                 key={task.id} 
-                className={`bg-brand-surface border rounded-2xl p-4 shadow-sm flex items-start justify-between gap-4 transition-all ${
+                className={`bg-brand-surface border rounded-2xl p-4 shadow-sm flex items-start justify-between gap-3.5 transition-all ${
                   isDone ? "border-brand-border/40 opacity-75" : "border-brand-border hover:border-brand-neon/40"
                 }`}
               >
-                <div className="flex items-start gap-3.5 flex-1">
+                <div className="flex items-start gap-3 flex-1 min-w-0">
                   {/* Status checkbox button */}
                   <button
                     onClick={() => toggleStatus(task)}
-                    className={`mt-0.5 w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${
+                    className={`mt-0.5 w-6 h-6 rounded-lg border flex items-center justify-center transition-all shrink-0 ${
                       isDone 
                         ? "bg-brand-neon border-brand-neon text-brand-black" 
                         : "border-gray-500 hover:border-brand-neon bg-brand-dark text-transparent"
@@ -254,7 +254,7 @@ export default function TasksManager() {
                 </div>
 
                 {/* Actions */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 shrink-0">
                   <button
                     onClick={() => handleOpenEdit(task)}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-brand-neon hover:bg-brand-dark"

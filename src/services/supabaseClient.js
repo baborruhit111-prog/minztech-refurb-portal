@@ -109,6 +109,7 @@ export const formatRecordForSupabase = (table, r) => {
         aspect_ratio: r.aspect_ratio || r.aspectRatio || null,
         market: r.market || null,
         tags: Array.isArray(r.tags) ? r.tags : [],
+        comments: Array.isArray(r.comments) ? r.comments : [],
         description: r.description || null,
         file_size: r.file_size || r.fileSize || null,
         uploaded_date: r.uploaded_date || r.uploadedDate || new Date().toISOString().split("T")[0]
@@ -182,6 +183,7 @@ export const formatRecordForSupabase = (table, r) => {
         caption: r.caption || null,
         media_url: r.media_url || r.mediaUrl || null,
         media_type: r.media_type || r.mediaType || "image",
+        comments: Array.isArray(r.comments) ? r.comments : [],
         notes: r.notes || null,
         created_at: r.created_at || r.createdAt || new Date().toISOString()
       };
@@ -222,7 +224,8 @@ export const formatRecordFromSupabase = (table, row) => {
         driveId: row.drive_id || row.driveId,
         aspectRatio: row.aspect_ratio || row.aspectRatio,
         fileSize: row.file_size || row.fileSize,
-        uploadedDate: row.uploaded_date || row.uploadedDate
+        uploadedDate: row.uploaded_date || row.uploadedDate,
+        comments: Array.isArray(row.comments) ? row.comments : []
       };
     case "refurb_notifications":
       return {
@@ -261,7 +264,8 @@ export const formatRecordFromSupabase = (table, row) => {
         scheduledTime: row.scheduled_time || row.scheduledTime,
         assignedMember: row.assigned_member || row.assignedMember,
         mediaUrl: row.media_url || row.mediaUrl,
-        mediaType: row.media_type || row.mediaType
+        mediaType: row.media_type || row.mediaType,
+        comments: Array.isArray(row.comments) ? row.comments : []
       };
     default:
       return row;
@@ -472,6 +476,18 @@ export const startAutoSyncBackgroundLoop = (activeUsername) => {
       const { data: remoteUsers, error: userErr } = await sb.from("refurb_users").select("*");
       if (!userErr && remoteUsers && remoteUsers.length > 0) {
         window.dispatchEvent(new CustomEvent("minztech_remote_users_received", { detail: remoteUsers }));
+      }
+
+      // C. Periodically sync social posts & comments so mentions and replies show up on all devices
+      const { data: remotePosts, error: postErr } = await sb.from("refurb_social_posts").select("*");
+      if (!postErr && remotePosts && remotePosts.length > 0) {
+        window.dispatchEvent(new CustomEvent("minztech_remote_social_received", { detail: remotePosts }));
+      }
+
+      // D. Periodically sync media assets & comments
+      const { data: remoteMedia, error: mediaErr } = await sb.from("refurb_media_assets").select("*");
+      if (!mediaErr && remoteMedia && remoteMedia.length > 0) {
+        window.dispatchEvent(new CustomEvent("minztech_remote_media_received", { detail: remoteMedia }));
       }
     } catch (err) {
       // Ignore background network blips
@@ -706,9 +722,11 @@ CREATE TABLE IF NOT EXISTS public.refurb_social_posts (
     caption TEXT,
     media_url TEXT,
     media_type TEXT DEFAULT 'image',
+    comments JSONB DEFAULT '[]'::jsonb,
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+ALTER TABLE public.refurb_social_posts ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;
 
 -- 5. Media Gallery Table (Google Drive Connected Assets)
 CREATE TABLE IF NOT EXISTS public.refurb_media_assets (
@@ -722,10 +740,12 @@ CREATE TABLE IF NOT EXISTS public.refurb_media_assets (
     aspect_ratio TEXT,
     market TEXT,
     tags JSONB DEFAULT '[]'::jsonb,
+    comments JSONB DEFAULT '[]'::jsonb,
     description TEXT,
     file_size TEXT,
     uploaded_date DATE DEFAULT CURRENT_DATE
 );
+ALTER TABLE public.refurb_media_assets ADD COLUMN IF NOT EXISTS comments JSONB DEFAULT '[]'::jsonb;
 
 -- 6. Member Tasks Table (Daily Task Checklist & Accountability)
 CREATE TABLE IF NOT EXISTS public.refurb_tasks (

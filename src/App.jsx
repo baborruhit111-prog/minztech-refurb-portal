@@ -15,7 +15,7 @@ import NotificationCenter from "./components/NotificationCenter";
 import InAppNotificationBanner from "./components/InAppNotificationBanner";
 import { startAutoSyncBackgroundLoop } from "./services/supabaseClient";
 import { deliverIncomingNotificationToDevice } from "./services/notifications";
-import { syncRemoteUsersToLocal } from "./services/storage";
+import { syncRemoteUsersToLocal, syncRemoteSocialPostsToLocal, syncRemoteMediaAssetsToLocal } from "./services/storage";
 
 export default function App() {
   const { user, loading, isAdmin, isSuperAdmin } = useAuth();
@@ -42,13 +42,29 @@ export default function App() {
       }
     };
 
+    const handleRemoteSocial = (e) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        syncRemoteSocialPostsToLocal(e.detail);
+      }
+    };
+
+    const handleRemoteMedia = (e) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        syncRemoteMediaAssetsToLocal(e.detail);
+      }
+    };
+
     window.addEventListener("minztech_remote_notification_received", handleRemoteNotif);
     window.addEventListener("minztech_remote_users_received", handleRemoteUsers);
+    window.addEventListener("minztech_remote_social_received", handleRemoteSocial);
+    window.addEventListener("minztech_remote_media_received", handleRemoteMedia);
 
     return () => {
       cleanup();
       window.removeEventListener("minztech_remote_notification_received", handleRemoteNotif);
       window.removeEventListener("minztech_remote_users_received", handleRemoteUsers);
+      window.removeEventListener("minztech_remote_social_received", handleRemoteSocial);
+      window.removeEventListener("minztech_remote_media_received", handleRemoteMedia);
     };
   }, [user?.username]);
 

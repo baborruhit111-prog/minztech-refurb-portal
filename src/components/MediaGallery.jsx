@@ -99,8 +99,39 @@ export default function MediaGallery() {
     setAssets(getMediaAssets());
   };
 
+  // Live auto-refresh listener when background sync updates data
+  useEffect(() => {
+    const handleRefresh = () => {
+      setAssets(getMediaAssets());
+    };
+    window.addEventListener("minztech_data_refreshed", handleRefresh);
+    return () => window.removeEventListener("minztech_data_refreshed", handleRefresh);
+  }, []);
+
+  // Listen for navigation focus from notifications
+  useEffect(() => {
+    const handleFocusContent = (e) => {
+      const { targetId } = e.detail || {};
+      if (!targetId) return;
+      setExpandedComments(prev => ({ ...prev, [targetId]: true }));
+      setTimeout(() => {
+        const el = document.getElementById(`media_asset_${targetId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          el.classList.add("ring-2", "ring-brand-neon");
+          setTimeout(() => el.classList.remove("ring-2", "ring-brand-neon"), 3000);
+        }
+      }, 300);
+    };
+    window.addEventListener("minztech_focus_content", handleFocusContent);
+    return () => window.removeEventListener("minztech_focus_content", handleFocusContent);
+  }, []);
+
   const toggleComments = (assetId) => {
-    setExpandedComments(prev => ({ ...prev, [assetId]: !prev[assetId] }));
+    setExpandedComments(prev => ({ 
+      ...prev, 
+      [assetId]: prev[assetId] !== undefined ? !prev[assetId] : false 
+    }));
   };
 
   // Keyboard navigation for Lightbox
@@ -540,13 +571,16 @@ export default function MediaGallery() {
           </div>
         ) : (
           filteredAssets.map((asset) => {
-            const isCommentsOpen = expandedComments[asset.id];
+            const isCommentsOpen = expandedComments[asset.id] !== undefined
+              ? expandedComments[asset.id]
+              : (asset.comments && asset.comments.length > 0);
             const commentsCount = (asset.comments || []).length;
             const isRestricted = restrictedAssets[asset.id];
 
             return (
               <div 
                 key={asset.id} 
+                id={`media_asset_${asset.id}`}
                 className="bg-[#1f1f1f] border border-brand-border/80 hover:border-brand-neon/50 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between group transition-all"
               >
                 <div>
