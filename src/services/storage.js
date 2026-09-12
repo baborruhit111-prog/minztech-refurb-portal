@@ -306,7 +306,7 @@ export const deleteMediaAsset = (id) => {
 
 // Helper: Google Drive API Key storage
 const GDRIVE_API_KEY_STORAGE = "minztech_gdrive_api_key";
-export const getGoogleDriveApiKey = () => localStorage.getItem(GDRIVE_API_KEY_STORAGE) || "";
+export const getGoogleDriveApiKey = () => localStorage.getItem(GDRIVE_API_KEY_STORAGE) || import.meta.env.VITE_GOOGLE_DRIVE_API_KEY || "";
 export const saveGoogleDriveApiKey = (key) => {
   if (key) {
     localStorage.setItem(GDRIVE_API_KEY_STORAGE, key.trim());
