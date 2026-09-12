@@ -6,7 +6,7 @@ import {
   INITIAL_SOCIAL_POSTS, 
   INITIAL_MEDIA_ASSETS, 
   INITIAL_TASKS 
-} from "../data/mockData";
+} from "../data/mockData.js";
 
 // Storage keys
 const SUPABASE_URL_KEY = "minztech_supabase_url";
@@ -18,8 +18,8 @@ const LAST_SYNC_KEY = "minztech_last_sync";
 let supabaseInstance = null;
 
 export const getSupabaseConfig = () => {
-  const url = localStorage.getItem(SUPABASE_URL_KEY) || import.meta.env.VITE_SUPABASE_URL || "";
-  const key = localStorage.getItem(SUPABASE_KEY_KEY) || import.meta.env.VITE_SUPABASE_ANON_KEY || "";
+  const url = localStorage.getItem(SUPABASE_URL_KEY) || (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_URL) || "";
+  const key = localStorage.getItem(SUPABASE_KEY_KEY) || (typeof import.meta !== "undefined" && import.meta.env?.VITE_SUPABASE_ANON_KEY) || "";
   return { url, key, isConfigured: Boolean(url && key && url.includes(".supabase.co")) };
 };
 
@@ -103,8 +103,26 @@ export const flushSyncQueue = async () => {
     const remaining = [];
     for (const item of queue) {
       try {
+        let recordToUpsert = item.record;
+        if (item.table === "refurb_notifications") {
+          recordToUpsert = {
+            id: item.record.id,
+            recipient_username: (item.record.recipient_username || item.record.recipientUsername || "").toLowerCase(),
+            sender_name: item.record.sender_name || item.record.senderName || "Team Member",
+            sender_username: item.record.sender_username || item.record.senderUsername || "user",
+            type: item.record.type || "mention",
+            message: item.record.message,
+            target_type: item.record.target_type || item.record.targetType || "",
+            target_id: item.record.target_id || item.record.targetId || "",
+            target_title: item.record.target_title || item.record.targetTitle || "",
+            target_tab: item.record.target_tab || item.record.targetTab || "calendar",
+            read: !!item.record.read,
+            created_at: item.record.created_at || item.record.createdAt || new Date().toISOString()
+          };
+        }
+
         if (item.action === "upsert") {
-          const { error } = await supabase.from(item.table).upsert(item.record);
+          const { error } = await supabase.from(item.table).upsert(recordToUpsert);
           if (error) {
             console.warn(`Sync retry queued for ${item.table}:`, error.message);
             remaining.push(item);
@@ -167,48 +185,78 @@ export const clearSyncQueue = () => {
   }
 };
 
-// Automatic background polling loop for multi-device sync and fast mentions delivery
+// Automatic background polling loop & Supabase Realtime for multi-device sync and fast mentions delivery
 export const startAutoSyncBackgroundLoop = (activeUsername) => {
-  if (typeof window === "undefined") return () => {};
+  if (typeof window === "undefined" || !activeUsername) return () => {};
 
+  const cleanUser = activeUsername.trim().toLowerCase();
+  const supabase = getSupabase();
+
+  // Track already notified IDs in this session to prevent repeated alerts
+  const processedNotifIds = new Set();
+  try {
+    const existingRaw = localStorage.getItem("minztech_notifications");
+    if (existingRaw) {
+      JSON.parse(existingRaw).forEach(n => processedNotifIds.add(n.id));
+    }
+  } catch (e) {}
+
+  // 1. Supabase Realtime channel for instant sub-second mention alerts on mobile & desktop
+  let realtimeChannel = null;
+  if (supabase) {
+    try {
+      realtimeChannel = supabase
+        .channel(`portal_notifications_${cleanUser}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'refurb_notifications'
+          },
+          (payload) => {
+            const row = payload.new;
+            if (!row || !row.id) return;
+            const rec = (row.recipient_username || row.recipientUsername || "").toLowerCase();
+            if (rec === cleanUser && !processedNotifIds.has(row.id)) {
+              processedNotifIds.add(row.id);
+              window.dispatchEvent(new CustomEvent("minztech_remote_notification_received", { detail: row }));
+            }
+          }
+        )
+        .subscribe();
+    } catch (err) {
+      console.warn("Realtime channel subscription note:", err);
+    }
+  }
+
+  // 2. High-frequency polling loop (every 6 seconds) as guaranteed resilient backup
   const runTick = async () => {
-    // 1. Flush any pending queue operations
+    // A. Flush pending offline queue
     flushSyncQueue();
 
-    const supabase = getSupabase();
-    if (!supabase || !activeUsername) return;
+    const sb = getSupabase();
+    if (!sb) return;
 
     try {
-      // 2. Poll for new unread notifications for this user
-      const { data: remoteNotifs, error: notifErr } = await supabase
+      // Query notifications specifically addressed to this user
+      const { data: remoteNotifs, error: notifErr } = await sb
         .from("refurb_notifications")
         .select("*")
-        .eq("recipientUsername", activeUsername)
-        .order("createdAt", { ascending: false })
+        .eq("recipient_username", cleanUser)
+        .order("created_at", { ascending: false })
         .limit(15);
 
       if (!notifErr && remoteNotifs && remoteNotifs.length > 0) {
-        const localRaw = localStorage.getItem("minztech_notifications");
-        const localNotifs = localRaw ? JSON.parse(localRaw) : [];
-        const localIds = new Set(localNotifs.map(n => n.id));
-
-        let hasNew = false;
         for (const rn of remoteNotifs) {
-          if (!localIds.has(rn.id)) {
-            hasNew = true;
-            localNotifs.unshift(rn);
-            // Trigger in-app notification banner
-            window.dispatchEvent(new CustomEvent("minztech_in_app_notification", { detail: rn }));
+          if (!processedNotifIds.has(rn.id)) {
+            processedNotifIds.add(rn.id);
+            window.dispatchEvent(new CustomEvent("minztech_remote_notification_received", { detail: rn }));
           }
-        }
-
-        if (hasNew) {
-          localStorage.setItem("minztech_notifications", JSON.stringify(localNotifs));
-          window.dispatchEvent(new CustomEvent("minztech_data_refreshed", { detail: { type: "notifications" } }));
         }
       }
     } catch (err) {
-      console.warn("Auto sync loop note:", err);
+      // Ignore background network blips
     }
   };
 
@@ -219,6 +267,11 @@ export const startAutoSyncBackgroundLoop = (activeUsername) => {
   return () => {
     clearTimeout(initialTimer);
     clearInterval(interval);
+    if (realtimeChannel && supabase) {
+      try {
+        supabase.removeChannel(realtimeChannel);
+      } catch (e) {}
+    }
   };
 };
 
@@ -482,6 +535,22 @@ CREATE TABLE IF NOT EXISTS public.refurb_tasks (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 7. Notifications & Team Mentions Table (Instant Push & Mention Delivery)
+CREATE TABLE IF NOT EXISTS public.refurb_notifications (
+    id TEXT PRIMARY KEY,
+    recipient_username TEXT NOT NULL,
+    sender_name TEXT,
+    sender_username TEXT,
+    type TEXT DEFAULT 'mention',
+    message TEXT,
+    target_type TEXT,
+    target_id TEXT,
+    target_title TEXT,
+    target_tab TEXT,
+    read BOOLEAN DEFAULT false,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Disable Row Level Security (RLS) or open public policies for internal operations
 ALTER TABLE public.refurb_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refurb_customers ENABLE ROW LEVEL SECURITY;
@@ -489,6 +558,7 @@ ALTER TABLE public.refurb_stock_offers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refurb_social_posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refurb_media_assets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refurb_tasks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.refurb_notifications ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Allow full access for portal refurb_users" ON public.refurb_users FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow full access for portal refurb_customers" ON public.refurb_customers FOR ALL USING (true) WITH CHECK (true);
@@ -496,6 +566,16 @@ CREATE POLICY "Allow full access for portal refurb_stock_offers" ON public.refur
 CREATE POLICY "Allow full access for portal refurb_social_posts" ON public.refurb_social_posts FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow full access for portal refurb_media_assets" ON public.refurb_media_assets FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow full access for portal refurb_tasks" ON public.refurb_tasks FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow full access for portal refurb_notifications" ON public.refurb_notifications FOR ALL USING (true) WITH CHECK (true);
+
+-- Enable Realtime replication for instant sub-second mention alerts
+DO $$ 
+BEGIN 
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.refurb_notifications;
+EXCEPTION 
+    WHEN duplicate_object THEN NULL;
+    WHEN undefined_object THEN NULL;
+END $$;
 
 -- Insert Default Owner / Super Admin Account
 INSERT INTO public.refurb_users (id, username, password, name, role, title, email)

@@ -5,8 +5,8 @@ import {
   INITIAL_SOCIAL_POSTS, 
   INITIAL_MEDIA_ASSETS, 
   INITIAL_TASKS 
-} from "../data/mockData";
-import { addToSyncQueue, safeSupabaseExec } from "./supabaseClient";
+} from "../data/mockData.js";
+import { addToSyncQueue, safeSupabaseExec } from "./supabaseClient.js";
 
 const KEYS = {
   USERS: "minztech_users",
@@ -270,7 +270,7 @@ export const deleteMediaAsset = (id) => {
 
 // Helper: Google Drive API Key storage
 const GDRIVE_API_KEY_STORAGE = "minztech_gdrive_api_key";
-export const getGoogleDriveApiKey = () => localStorage.getItem(GDRIVE_API_KEY_STORAGE) || import.meta.env.VITE_GOOGLE_DRIVE_API_KEY || "";
+export const getGoogleDriveApiKey = () => localStorage.getItem(GDRIVE_API_KEY_STORAGE) || (typeof import.meta !== "undefined" && import.meta.env?.VITE_GOOGLE_DRIVE_API_KEY) || "";
 export const saveGoogleDriveApiKey = (key) => {
   if (key) {
     localStorage.setItem(GDRIVE_API_KEY_STORAGE, key.trim());

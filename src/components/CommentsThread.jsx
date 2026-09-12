@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { MessageSquare, Send, AtSign, User, Clock, CheckCircle2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { getUsers } from "../services/storage";
@@ -15,6 +15,7 @@ export default function CommentsThread({
   const { user: currentUser } = useAuth();
   const [commentText, setCommentText] = useState("");
   const [showMentionMenu, setShowMentionMenu] = useState(false);
+  const [mentionNotice, setMentionNotice] = useState("");
   const users = getUsers();
 
   const handleAddComment = (e) => {
@@ -31,7 +32,7 @@ export default function CommentsThread({
     };
 
     // Process @mentions and notify mentioned team members
-    processCommentMentions({
+    const mentioned = processCommentMentions({
       commentText: commentText.trim(),
       currentUser,
       targetType,
@@ -39,6 +40,11 @@ export default function CommentsThread({
       targetTitle,
       targetTab
     });
+
+    if (mentioned && mentioned.length > 0) {
+      setMentionNotice(`✓ Mention sent to @${mentioned.join(", @")}`);
+      setTimeout(() => setMentionNotice(""), 4000);
+    }
 
     const updatedComments = [...(comments || []), newComment];
     onSaveComments(updatedComments);
@@ -103,7 +109,7 @@ export default function CommentsThread({
       {/* Input box */}
       <form onSubmit={handleAddComment} className="relative">
         {/* Quick mention pills */}
-        <div className="flex items-center justify-between pb-1.5 text-[11px]">
+        <div className="flex items-center justify-between pb-1.5 text-[11px] flex-wrap gap-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-gray-400 flex items-center gap-0.5">
               <AtSign className="w-3 h-3 text-brand-neon" />
@@ -120,6 +126,13 @@ export default function CommentsThread({
               </button>
             ))}
           </div>
+
+          {mentionNotice && (
+            <div className="text-[11px] font-semibold text-brand-lime flex items-center gap-1 animate-fadeIn">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>{mentionNotice}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5">

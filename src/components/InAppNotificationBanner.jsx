@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Bell, X, ArrowRight, Sparkles, MessageSquare } from "lucide-react";
-import { triggerNotificationAlert } from "../services/audioHelper";
+import { useAuth } from "../context/AuthContext";
 
 export default function InAppNotificationBanner({ setActiveTab, onOpenNotifications }) {
+  const { user } = useAuth();
   const [activeNotification, setActiveNotification] = useState(null);
 
   useEffect(() => {
@@ -10,22 +11,25 @@ export default function InAppNotificationBanner({ setActiveTab, onOpenNotificati
       const notif = e.detail;
       if (!notif) return;
 
-      // Trigger audio chime and mobile vibration
-      triggerNotificationAlert();
+      // RECIPIENT VALIDATION: Strictly verify this banner is addressed to currently logged in user
+      const recipient = (notif.recipientUsername || notif.recipient_username || "").toLowerCase();
+      if (!user?.username || !recipient || recipient !== user.username.toLowerCase()) {
+        return; // Do NOT show banner on sender's screen or unrelated users' screens
+      }
 
       setActiveNotification(notif);
 
-      // Auto-dismiss after 7 seconds
+      // Auto-dismiss after 8 seconds
       const timer = setTimeout(() => {
         setActiveNotification((prev) => (prev?.id === notif.id ? null : prev));
-      }, 7000);
+      }, 8000);
 
       return () => clearTimeout(timer);
     };
 
     window.addEventListener("minztech_in_app_notification", handleNewNotif);
     return () => window.removeEventListener("minztech_in_app_notification", handleNewNotif);
-  }, []);
+  }, [user?.username]);
 
   if (!activeNotification) return null;
 

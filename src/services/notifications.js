@@ -1,7 +1,7 @@
-import { getUsers } from "./storage";
-import { addToSyncQueue, safeSupabaseExec } from "./supabaseClient";
-import { sendDesktopNotification } from "./desktopNotifications";
-import { triggerNotificationAlert } from "./audioHelper";
+import { getUsers } from "./storage.js";
+import { addToSyncQueue, safeSupabaseExec } from "./supabaseClient.js";
+import { sendDesktopNotification } from "./desktopNotifications.js";
+import { triggerNotificationAlert } from "./audioHelper.js";
 
 const NOTIFICATIONS_KEY = "minztech_notifications";
 
@@ -36,13 +36,24 @@ export const INITIAL_NOTIFICATIONS = [
   }
 ];
 
-export const getNotifications = (username) => {
+export const loadRawNotifications = () => {
   try {
     const raw = localStorage.getItem(NOTIFICATIONS_KEY);
-    const all = raw ? JSON.parse(raw) : INITIAL_NOTIFICATIONS;
+    return raw ? JSON.parse(raw) : INITIAL_NOTIFICATIONS;
+  } catch (e) {
+    return INITIAL_NOTIFICATIONS;
+  }
+};
+
+export const getNotifications = (username) => {
+  try {
+    const all = loadRawNotifications();
     if (!username) return all;
-    // Return notifications directed to this user, or if super admin mt206.ruhit also allow seeing all
-    return all.filter(n => !n.recipientUsername || n.recipientUsername.toLowerCase() === username.toLowerCase());
+    // Strictly return notifications directed to this specific user
+    return all.filter(n => {
+      const rec = (n.recipientUsername || n.recipient_username || "").toLowerCase();
+      return rec === username.toLowerCase();
+    });
   } catch (e) {
     return INITIAL_NOTIFICATIONS;
   }
@@ -52,60 +63,137 @@ export const saveNotificationsList = (list) => {
   localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(list));
 };
 
+// Add a notification sent from the current user
+// IMPORTANT: The SENDER must NOT receive audio chimes, vibrations, or popups for their own sent mention!
 export const addNotification = (notif) => {
-  const all = getNotifications();
   const newNotif = {
-    id: `notif_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    id: notif.id || `notif_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    recipientUsername: (notif.recipientUsername || notif.recipient_username || "").toLowerCase(),
+    senderName: notif.senderName || notif.sender_name || "Team Member",
+    senderUsername: (notif.senderUsername || notif.sender_username || "user").toLowerCase(),
+    type: notif.type || "mention",
+    message: notif.message,
+    targetType: notif.targetType || notif.target_type || "",
+    targetId: notif.targetId || notif.target_id || "",
+    targetTitle: notif.targetTitle || notif.target_title || "",
+    targetTab: notif.targetTab || notif.target_tab || "calendar",
     read: false,
-    createdAt: new Date().toISOString(),
-    ...notif
+    createdAt: notif.createdAt || new Date().toISOString()
   };
 
-  const updated = [newNotif, ...all];
+  // 1. Save in local cache
+  const all = loadRawNotifications();
+  const updated = [newNotif, ...all.filter(n => n.id !== newNotif.id)];
   saveNotificationsList(updated);
-  addToSyncQueue("refurb_notifications", "upsert", newNotif);
 
-  // 1. Trigger audible chime and mobile vibration immediately
-  triggerNotificationAlert();
+  // 2. Prepare payload for Supabase Cloud (PostgreSQL snake_case schema)
+  const supabasePayload = {
+    id: newNotif.id,
+    recipient_username: newNotif.recipientUsername,
+    sender_name: newNotif.senderName,
+    sender_username: newNotif.senderUsername,
+    type: newNotif.type,
+    message: newNotif.message,
+    target_type: newNotif.targetType,
+    target_id: newNotif.targetId,
+    target_title: newNotif.targetTitle,
+    target_tab: newNotif.targetTab,
+    read: false,
+    created_at: newNotif.createdAt
+  };
 
-  // 2. Dispatch interactive In-App notification event for phones & active screens
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("minztech_in_app_notification", { detail: newNotif }));
-  }
+  // 3. Queue for synchronization & flush immediately to Supabase
+  addToSyncQueue("refurb_notifications", "upsert", supabasePayload);
+  safeSupabaseExec((sb) => sb.from("refurb_notifications").upsert(supabasePayload));
 
-  // 3. Trigger browser desktop notification if permitted
-  sendDesktopNotification(
-    `MiNZTECH Mention from ${notif.senderName || "Team Member"}`,
-    notif.message,
-    "/brand/logo-white.png"
-  );
-
-  safeSupabaseExec((sb) => sb.from("refurb_notifications").upsert(newNotif));
+  // Notice: We intentionally do NOT call triggerNotificationAlert,
+  // do NOT dispatch minztech_in_app_notification, and do NOT call sendDesktopNotification here.
+  // The sender is creating the mention; only the RECIPIENT should be alerted.
 
   return newNotif;
 };
 
+// Deliver an incoming notification directly to the recipient's device (phone/PC)
+export const deliverIncomingNotificationToDevice = (incomingNotif, activeUsername) => {
+  if (!incomingNotif || !activeUsername) return false;
+
+  const recipient = (incomingNotif.recipientUsername || incomingNotif.recipient_username || "").toLowerCase();
+  if (recipient !== activeUsername.toLowerCase()) {
+    return false; // Not addressed to this user
+  }
+
+  const normalized = {
+    id: incomingNotif.id,
+    recipientUsername: recipient,
+    senderName: incomingNotif.senderName || incomingNotif.sender_name || "Team Member",
+    senderUsername: incomingNotif.senderUsername || incomingNotif.sender_username || "user",
+    type: incomingNotif.type || "mention",
+    message: incomingNotif.message,
+    targetType: incomingNotif.targetType || incomingNotif.target_type || "",
+    targetId: incomingNotif.targetId || incomingNotif.target_id || "",
+    targetTitle: incomingNotif.targetTitle || incomingNotif.target_title || "",
+    targetTab: incomingNotif.targetTab || incomingNotif.target_tab || "calendar",
+    read: !!incomingNotif.read,
+    createdAt: incomingNotif.createdAt || incomingNotif.created_at || new Date().toISOString()
+  };
+
+  // 1. Cache to local notifications
+  const all = loadRawNotifications();
+  if (!all.some(n => n.id === normalized.id)) {
+    const updated = [normalized, ...all];
+    saveNotificationsList(updated);
+  }
+
+  // 2. Play sound chime and mobile vibration on the RECIPIENT device
+  triggerNotificationAlert();
+
+  // 3. Trigger In-App Notification Banner on RECIPIENT screen
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("minztech_in_app_notification", { detail: normalized }));
+    window.dispatchEvent(new CustomEvent("minztech_data_refreshed", { detail: { type: "notifications" } }));
+  }
+
+  // 4. Trigger desktop/browser notification if permitted
+  sendDesktopNotification(
+    `MiNZTECH Mention from ${normalized.senderName}`,
+    normalized.message,
+    "/brand/logo-white.png"
+  );
+
+  return true;
+};
+
 export const markNotificationAsRead = (id) => {
-  const all = getNotifications();
+  const all = loadRawNotifications();
   const updated = all.map(n => n.id === id ? { ...n, read: true } : n);
   saveNotificationsList(updated);
+  safeSupabaseExec((sb) => sb.from("refurb_notifications").update({ read: true }).eq("id", id));
 };
 
 export const markAllNotificationsAsRead = (username) => {
-  const all = getNotifications();
+  const all = loadRawNotifications();
   const updated = all.map(n => {
-    if (!username || n.recipientUsername === username) {
+    const rec = (n.recipientUsername || n.recipient_username || "").toLowerCase();
+    if (!username || rec === username.toLowerCase()) {
       return { ...n, read: true };
     }
     return n;
   });
   saveNotificationsList(updated);
+  if (username) {
+    safeSupabaseExec((sb) => sb.from("refurb_notifications").update({ read: true }).eq("recipient_username", username.toLowerCase()));
+  }
 };
 
 export const clearNotifications = (username) => {
-  const all = getNotifications();
-  const remaining = username ? all.filter(n => n.recipientUsername !== username) : [];
+  const all = loadRawNotifications();
+  const remaining = username 
+    ? all.filter(n => (n.recipientUsername || n.recipient_username || "").toLowerCase() !== username.toLowerCase()) 
+    : [];
   saveNotificationsList(remaining);
+  if (username) {
+    safeSupabaseExec((sb) => sb.from("refurb_notifications").delete().eq("recipient_username", username.toLowerCase()));
+  }
 };
 
 // Helper: Parse @mentions in text and dispatch notifications
@@ -134,10 +222,10 @@ export const processCommentMentions = ({
       u.name.toLowerCase().includes(rawTag)
     );
 
-    if (matched && matched.username !== currentUser?.username && !notifiedUsernames.has(matched.username)) {
-      notifiedUsernames.add(matched.username);
+    if (matched && matched.username.toLowerCase() !== currentUser?.username?.toLowerCase() && !notifiedUsernames.has(matched.username.toLowerCase())) {
+      notifiedUsernames.add(matched.username.toLowerCase());
       addNotification({
-        recipientUsername: matched.username,
+        recipientUsername: matched.username.toLowerCase(),
         senderName: currentUser?.name || currentUser?.username || "Team Member",
         senderUsername: currentUser?.username || "user",
         type: "mention",

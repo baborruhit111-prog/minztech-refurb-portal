@@ -14,6 +14,7 @@ import SupabaseSyncModal from "./components/SupabaseSyncModal";
 import NotificationCenter from "./components/NotificationCenter";
 import InAppNotificationBanner from "./components/InAppNotificationBanner";
 import { startAutoSyncBackgroundLoop } from "./services/supabaseClient";
+import { deliverIncomingNotificationToDevice } from "./services/notifications";
 
 export default function App() {
   const { user, loading, isAdmin, isSuperAdmin } = useAuth();
@@ -27,7 +28,19 @@ export default function App() {
   useEffect(() => {
     if (!user?.username) return;
     const cleanup = startAutoSyncBackgroundLoop(user.username);
-    return cleanup;
+
+    const handleRemoteNotif = (e) => {
+      if (e.detail && user?.username) {
+        deliverIncomingNotificationToDevice(e.detail, user.username);
+      }
+    };
+
+    window.addEventListener("minztech_remote_notification_received", handleRemoteNotif);
+
+    return () => {
+      cleanup();
+      window.removeEventListener("minztech_remote_notification_received", handleRemoteNotif);
+    };
   }, [user?.username]);
 
   // Restrict User Access tab strictly to Super Admin / Owner
