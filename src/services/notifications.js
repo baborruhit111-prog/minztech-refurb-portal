@@ -1,5 +1,5 @@
-﻿import { getUsers } from "./storage";
-import { addToSyncQueue, getSupabase } from "./supabaseClient";
+import { getUsers } from "./storage";
+import { addToSyncQueue, safeSupabaseExec } from "./supabaseClient";
 import { sendDesktopNotification } from "./desktopNotifications";
 
 const NOTIFICATIONS_KEY = "minztech_notifications";
@@ -71,10 +71,7 @@ export const addNotification = (notif) => {
     "/brand/logo-white.png"
   );
 
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_notifications").upsert(newNotif).catch(console.warn);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_notifications").upsert(newNotif));
 
   return newNotif;
 };

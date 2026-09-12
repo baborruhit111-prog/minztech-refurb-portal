@@ -32,6 +32,8 @@ export default function UserManagement() {
     email: ""
   });
   const [toastMessage, setToastMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -55,33 +57,45 @@ export default function UserManagement() {
       title: "",
       email: ""
     });
+    setFormError("");
+    setIsSubmitting(false);
     setIsModalOpen(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
+    setFormError("");
+
     if (!newUser.username.trim() || !newUser.password) {
-      alert("Username and password are required.");
+      setFormError("Username and password are required.");
       return;
     }
 
     const cleanUsername = newUser.username.trim().toLowerCase();
-    const exists = users.find(u => u.username.toLowerCase() === cleanUsername);
+    const exists = users.find(u => (u.username || "").toLowerCase() === cleanUsername);
     if (exists) {
-      alert(`The username "${newUser.username}" already exists. Please pick a unique username.`);
+      setFormError(`The username "${newUser.username}" already exists. Please pick a unique username.`);
       return;
     }
 
-    const userToSave = {
-      ...newUser,
-      username: cleanUsername,
-      created_at: new Date().toISOString()
-    };
+    setIsSubmitting(true);
+    try {
+      const userToSave = {
+        ...newUser,
+        username: cleanUsername,
+        created_at: new Date().toISOString()
+      };
 
-    await saveUser(userToSave);
-    refreshList();
-    setIsModalOpen(false);
-    showToast(`Account created for ${newUser.name || newUser.username} and synced to Supabase!`);
+      await saveUser(userToSave);
+      refreshList();
+      setIsModalOpen(false);
+      showToast(`Account created for ${newUser.name || newUser.username} and synced!`);
+    } catch (err) {
+      console.error("Error creating user:", err);
+      setFormError(err.message || "Failed to create account. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDelete = (u) => {
@@ -277,6 +291,13 @@ Role: ${u.role}`;
             </div>
 
             <form onSubmit={handleSave} className="space-y-3.5 text-xs">
+              {formError && (
+                <div className="p-3 bg-red-950/60 border border-red-500/50 rounded-xl text-red-200 text-xs flex items-center gap-2 animate-shake">
+                  <ShieldAlert className="w-4 h-4 text-red-400 flex-shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-gray-300 font-semibold mb-1">Full Name</label>
@@ -358,15 +379,24 @@ Role: ${u.role}`;
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-brand-dark hover:bg-brand-hover text-gray-300"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 rounded-xl bg-brand-dark hover:bg-brand-hover text-gray-300 disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 rounded-xl bg-brand-neon text-brand-black font-bold hover:bg-brand-lime"
+                  disabled={isSubmitting}
+                  className="px-5 py-2 rounded-xl bg-brand-neon text-brand-black font-bold hover:bg-brand-lime disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md transition-all"
                 >
-                  Create & Sync Account
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-brand-black border-t-transparent rounded-full animate-spin"></div>
+                      <span>Creating & Syncing...</span>
+                    </>
+                  ) : (
+                    <span>Create & Sync Account</span>
+                  )}
                 </button>
               </div>
             </form>

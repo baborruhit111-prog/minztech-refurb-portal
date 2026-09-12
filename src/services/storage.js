@@ -6,7 +6,7 @@ import {
   INITIAL_MEDIA_ASSETS, 
   INITIAL_TASKS 
 } from "../data/mockData";
-import { addToSyncQueue, getSupabase } from "./supabaseClient";
+import { addToSyncQueue, safeSupabaseExec } from "./supabaseClient";
 
 const KEYS = {
   USERS: "minztech_users",
@@ -40,7 +40,7 @@ const save = (key, data) => {
 export const getUsers = () => load(KEYS.USERS, INITIAL_USERS);
 export const saveUser = async (user) => {
   const users = getUsers();
-  const index = users.findIndex((u) => u.id === user.id || u.username.toLowerCase() === user.username.toLowerCase());
+  const index = users.findIndex((u) => u.id === user.id || (u.username && user.username && u.username.toLowerCase() === user.username.toLowerCase()));
   let updated;
   if (index >= 0) {
     users[index] = { ...users[index], ...user, updated_at: new Date().toISOString() };
@@ -56,11 +56,8 @@ export const saveUser = async (user) => {
   save(KEYS.USERS, users);
   addToSyncQueue("refurb_users", "upsert", updated);
   
-  // Try immediate sync to Supabase
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_users").upsert(updated).catch(console.error);
-  }
+  // Safe background sync to Supabase (never throws or freezes UI)
+  safeSupabaseExec((sb) => sb.from("refurb_users").upsert(updated));
   return updated;
 };
 
@@ -68,10 +65,7 @@ export const deleteUser = async (userId) => {
   const users = getUsers().filter((u) => u.id !== userId);
   save(KEYS.USERS, users);
   addToSyncQueue("refurb_users", "delete", { id: userId });
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_users").delete().eq("id", userId).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_users").delete().eq("id", userId));
 };
 
 // ================= CUSTOMERS =================
@@ -93,10 +87,7 @@ export const saveCustomer = (customer) => {
   }
   save(KEYS.CUSTOMERS, list);
   addToSyncQueue("refurb_customers", "upsert", updated);
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_customers").upsert(updated).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_customers").upsert(updated));
   return updated;
 };
 
@@ -104,10 +95,7 @@ export const deleteCustomer = (id) => {
   const list = getCustomers().filter((c) => c.id !== id);
   save(KEYS.CUSTOMERS, list);
   addToSyncQueue("refurb_customers", "delete", { id });
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_customers").delete().eq("id", id).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_customers").delete().eq("id", id));
 };
 
 // Bulk Import Customers (e.g. CSV or JSON list)
@@ -118,10 +106,7 @@ export const bulkImportCustomers = (newCustomers) => {
   newCustomers.forEach((c) => {
     addToSyncQueue("refurb_customers", "upsert", c);
   });
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_customers").upsert(newCustomers).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_customers").upsert(newCustomers));
   return merged;
 };
 
@@ -144,9 +129,8 @@ export const bulkUpdateCustomers = (customerIds, updates) => {
     return c;
   });
   save(KEYS.CUSTOMERS, updatedList);
-  const supabase = getSupabase();
-  if (supabase && updatedRecords.length > 0) {
-    supabase.from("refurb_customers").upsert(updatedRecords).catch(console.error);
+  if (updatedRecords.length > 0) {
+    safeSupabaseExec((sb) => sb.from("refurb_customers").upsert(updatedRecords));
   }
   return updatedList;
 };
@@ -159,9 +143,8 @@ export const bulkDeleteCustomers = (customerIds) => {
   customerIds.forEach((id) => {
     addToSyncQueue("refurb_customers", "delete", { id });
   });
-  const supabase = getSupabase();
-  if (supabase && customerIds.length > 0) {
-    supabase.from("refurb_customers").delete().in("id", customerIds).catch(console.error);
+  if (customerIds.length > 0) {
+    safeSupabaseExec((sb) => sb.from("refurb_customers").delete().in("id", customerIds));
   }
   return list;
 };
@@ -214,11 +197,7 @@ export const saveStockOffer = (offer) => {
     list.unshift(updated);
   }
   save(KEYS.STOCK_OFFERS, list);
-  addToSyncQueue("refurb_stock_offers", "upsert", updated);
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_stock_offers").upsert(updated).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_stock_offers").upsert(updated));
   return updated;
 };
 
@@ -226,10 +205,7 @@ export const deleteStockOffer = (id) => {
   const list = getStockOffers().filter((o) => o.id !== id);
   save(KEYS.STOCK_OFFERS, list);
   addToSyncQueue("refurb_stock_offers", "delete", { id });
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_stock_offers").delete().eq("id", id).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_stock_offers").delete().eq("id", id));
 };
 
 // ================= SOCIAL POSTS =================
@@ -251,10 +227,7 @@ export const saveSocialPost = (post) => {
   }
   save(KEYS.SOCIAL_POSTS, list);
   addToSyncQueue("refurb_social_posts", "upsert", updated);
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_social_posts").upsert(updated).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_social_posts").upsert(updated));
   return updated;
 };
 
@@ -262,10 +235,7 @@ export const deleteSocialPost = (id) => {
   const list = getSocialPosts().filter((p) => p.id !== id);
   save(KEYS.SOCIAL_POSTS, list);
   addToSyncQueue("refurb_social_posts", "delete", { id });
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_social_posts").delete().eq("id", id).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_social_posts").delete().eq("id", id));
 };
 
 // ================= MEDIA ASSETS =================
@@ -287,10 +257,7 @@ export const saveMediaAsset = (asset) => {
   }
   save(KEYS.MEDIA_ASSETS, list);
   addToSyncQueue("refurb_media_assets", "upsert", updated);
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_media_assets").upsert(updated).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_media_assets").upsert(updated));
   return updated;
 };
 
@@ -298,10 +265,7 @@ export const deleteMediaAsset = (id) => {
   const list = getMediaAssets().filter((m) => m.id !== id);
   save(KEYS.MEDIA_ASSETS, list);
   addToSyncQueue("refurb_media_assets", "delete", { id });
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_media_assets").delete().eq("id", id).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_media_assets").delete().eq("id", id));
 };
 
 // Helper: Google Drive API Key storage
@@ -517,10 +481,7 @@ export const saveTask = (task) => {
   }
   save(KEYS.TASKS, list);
   addToSyncQueue("refurb_tasks", "upsert", updated);
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_tasks").upsert(updated).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_tasks").upsert(updated));
   return updated;
 };
 
@@ -528,10 +489,7 @@ export const deleteTask = (id) => {
   const list = getTasks().filter((t) => t.id !== id);
   save(KEYS.TASKS, list);
   addToSyncQueue("refurb_tasks", "delete", { id });
-  const supabase = getSupabase();
-  if (supabase) {
-    supabase.from("refurb_tasks").delete().eq("id", id).catch(console.error);
-  }
+  safeSupabaseExec((sb) => sb.from("refurb_tasks").delete().eq("id", id));
 };
 
 // ================= BACKUP & RESTORE =================

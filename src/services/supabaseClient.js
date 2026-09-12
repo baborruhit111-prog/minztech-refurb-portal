@@ -52,6 +52,28 @@ export const getSupabase = () => {
   return null;
 };
 
+// Safe helper for background Supabase queries (PostgrestBuilder is a thenable without .catch)
+export const safeSupabaseExec = (fn) => {
+  try {
+    const supabase = getSupabase();
+    if (supabase) {
+      const res = fn(supabase);
+      if (res && typeof res.then === "function") {
+        res.then(
+          (result) => {
+            if (result && result.error) {
+              console.warn("Supabase background sync notice:", result.error.message);
+            }
+          },
+          (err) => console.warn("Supabase background sync network notice:", err)
+        );
+      }
+    }
+  } catch (err) {
+    console.warn("Supabase exec error:", err);
+  }
+};
+
 // ==========================================
 // RESILIENT OFFLINE QUEUE & DATA INTEGRITY
 // ==========================================
