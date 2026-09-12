@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Lock, User, ShieldCheck, AlertCircle, Sparkles, Database, CheckCircle2, Laptop } from "lucide-react";
+import { Lock, User, ShieldCheck, AlertCircle, Database, CheckCircle2, Laptop } from "lucide-react";
 import { getSupabaseConfig } from "../services/supabaseClient";
 
 export default function Login() {
@@ -47,14 +47,6 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Quick fill default Admin credentials for the owner
-  const fillOwnerCredentials = () => {
-    setReadOnlyState(false);
-    setUsername("mt206.ruhit");
-    setPassword("Ruhit@mt");
-    setError("");
   };
 
   return (
@@ -219,21 +211,6 @@ export default function Login() {
               )}
             </button>
           </form>
-
-          {/* Quick-Fill Default Admin Button for Owner convenience */}
-          <div className="mt-6 pt-5 border-t border-brand-border text-center">
-            <p className="text-xs text-gray-400 mb-2.5">
-              Default Owner / Super Admin Account:
-            </p>
-            <button
-              type="button"
-              onClick={fillOwnerCredentials}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-brand-dark hover:bg-brand-hover border border-brand-border text-xs text-brand-neon transition-colors"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-brand-neon" />
-              <span>Fill Default Owner (mt206.ruhit)</span>
-            </button>
-          </div>
         </div>
 
         {/* Footer Brand Info */}
