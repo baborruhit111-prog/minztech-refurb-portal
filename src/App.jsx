@@ -15,6 +15,7 @@ import NotificationCenter from "./components/NotificationCenter";
 import InAppNotificationBanner from "./components/InAppNotificationBanner";
 import { startAutoSyncBackgroundLoop } from "./services/supabaseClient";
 import { deliverIncomingNotificationToDevice } from "./services/notifications";
+import { syncRemoteUsersToLocal } from "./services/storage";
 
 export default function App() {
   const { user, loading, isAdmin, isSuperAdmin } = useAuth();
@@ -35,11 +36,19 @@ export default function App() {
       }
     };
 
+    const handleRemoteUsers = (e) => {
+      if (e.detail && Array.isArray(e.detail)) {
+        syncRemoteUsersToLocal(e.detail);
+      }
+    };
+
     window.addEventListener("minztech_remote_notification_received", handleRemoteNotif);
+    window.addEventListener("minztech_remote_users_received", handleRemoteUsers);
 
     return () => {
       cleanup();
       window.removeEventListener("minztech_remote_notification_received", handleRemoteNotif);
+      window.removeEventListener("minztech_remote_users_received", handleRemoteUsers);
     };
   }, [user?.username]);
 

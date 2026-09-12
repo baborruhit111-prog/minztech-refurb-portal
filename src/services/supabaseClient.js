@@ -467,10 +467,17 @@ export const startAutoSyncBackgroundLoop = (activeUsername) => {
           }
         }
       }
+
+      // B. Periodically sync users from cloud so newly created accounts (like demo.mt) are available on all devices
+      const { data: remoteUsers, error: userErr } = await sb.from("refurb_users").select("*");
+      if (!userErr && remoteUsers && remoteUsers.length > 0) {
+        window.dispatchEvent(new CustomEvent("minztech_remote_users_received", { detail: remoteUsers }));
+      }
     } catch (err) {
       // Ignore background network blips
     }
   };
+
 
   // Initial tick after 1s, then every 6s
   const initialTimer = setTimeout(runTick, 1000);
@@ -750,7 +757,7 @@ CREATE TABLE IF NOT EXISTS public.refurb_notifications (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Disable Row Level Security (RLS) or open public policies for internal operations
+-- Enable Row Level Security (RLS) safely
 ALTER TABLE public.refurb_users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refurb_customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refurb_stock_offers ENABLE ROW LEVEL SECURITY;
@@ -759,21 +766,45 @@ ALTER TABLE public.refurb_media_assets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refurb_tasks ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.refurb_notifications ENABLE ROW LEVEL SECURITY;
 
+-- Idempotent RLS Policies (Safe to run multiple times without conflict)
+DROP POLICY IF EXISTS "Allow full access for portal refurb_users" ON public.refurb_users;
 CREATE POLICY "Allow full access for portal refurb_users" ON public.refurb_users FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow full access for portal refurb_customers" ON public.refurb_customers;
 CREATE POLICY "Allow full access for portal refurb_customers" ON public.refurb_customers FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow full access for portal refurb_stock_offers" ON public.refurb_stock_offers;
 CREATE POLICY "Allow full access for portal refurb_stock_offers" ON public.refurb_stock_offers FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow full access for portal refurb_social_posts" ON public.refurb_social_posts;
 CREATE POLICY "Allow full access for portal refurb_social_posts" ON public.refurb_social_posts FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow full access for portal refurb_media_assets" ON public.refurb_media_assets;
 CREATE POLICY "Allow full access for portal refurb_media_assets" ON public.refurb_media_assets FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow full access for portal refurb_tasks" ON public.refurb_tasks;
 CREATE POLICY "Allow full access for portal refurb_tasks" ON public.refurb_tasks FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow full access for portal refurb_notifications" ON public.refurb_notifications;
 CREATE POLICY "Allow full access for portal refurb_notifications" ON public.refurb_notifications FOR ALL USING (true) WITH CHECK (true);
 
--- Enable Realtime replication for instant sub-second mention alerts
+-- Enable Realtime replication for instant sub-second mention alerts and live sync
 DO $$ 
 BEGIN 
     ALTER PUBLICATION supabase_realtime ADD TABLE public.refurb_notifications;
-EXCEPTION 
-    WHEN duplicate_object THEN NULL;
-    WHEN undefined_object THEN NULL;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$ 
+BEGIN 
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.refurb_users;
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
+DO $$ 
+BEGIN 
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.refurb_tasks;
+EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
 -- Insert Default Owner / Super Admin Account

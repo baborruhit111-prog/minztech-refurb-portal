@@ -228,6 +228,22 @@ export default function SupabaseSyncModal({ isOpen, onClose }) {
               </span>
             </div>
 
+            {/* Missing Schema / Error Quick Helper */}
+            {syncQueue.some(item => item.lastError) && (
+              <div className="p-3 bg-amber-500/15 border border-amber-500/40 rounded-xl text-amber-200 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <span>Tables need to be updated in Supabase (e.g. notifications table).</span>
+                </div>
+                <button
+                  onClick={() => setActiveTab("schema")}
+                  className="px-2.5 py-1 bg-amber-400 hover:bg-amber-300 text-black font-bold rounded-lg text-[11px] whitespace-nowrap"
+                >
+                  View SQL Schema
+                </button>
+              </div>
+            )}
+
             {/* Inputs */}
             <div className="space-y-3 pt-1">
               <div>

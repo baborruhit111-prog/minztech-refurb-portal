@@ -207,25 +207,38 @@ export const processCommentMentions = ({
 }) => {
   if (!commentText) return [];
 
-  const users = getUsers();
+  let users = [];
+  try {
+    users = getUsers() || [];
+  } catch (e) {
+    users = [];
+  }
+
   const mentionMatches = commentText.match(/@([a-zA-Z0-9_.-]+)/g);
   if (!mentionMatches) return [];
 
   const notifiedUsernames = new Set();
+  const currentCleanUser = (currentUser?.username || "").trim().toLowerCase();
 
   mentionMatches.forEach(tag => {
-    const rawTag = tag.replace("@", "").toLowerCase();
-    // Find matching user by username or name
+    const rawTag = tag.replace("@", "").trim().toLowerCase();
+    if (!rawTag) return;
+
+    // 1. Try to find matching user by username or name in local list
     const matched = users.find(u => 
-      u.username.toLowerCase() === rawTag || 
-      u.name.toLowerCase().replace(/\s+/g, "") === rawTag ||
-      u.name.toLowerCase().includes(rawTag)
+      (u.username || "").toLowerCase() === rawTag || 
+      (u.name || "").toLowerCase().replace(/\s+/g, "") === rawTag ||
+      (u.name || "").toLowerCase().includes(rawTag)
     );
 
-    if (matched && matched.username.toLowerCase() !== currentUser?.username?.toLowerCase() && !notifiedUsernames.has(matched.username.toLowerCase())) {
-      notifiedUsernames.add(matched.username.toLowerCase());
+    // 2. Resolve target recipient: prefer matched account username, or fallback to raw tag directly
+    const targetUsername = matched ? (matched.username || "").toLowerCase() : rawTag;
+
+    // 3. Prevent self-mentions and duplicate alerts
+    if (targetUsername && targetUsername !== currentCleanUser && !notifiedUsernames.has(targetUsername)) {
+      notifiedUsernames.add(targetUsername);
       addNotification({
-        recipientUsername: matched.username.toLowerCase(),
+        recipientUsername: targetUsername,
         senderName: currentUser?.name || currentUser?.username || "Team Member",
         senderUsername: currentUser?.username || "user",
         type: "mention",
@@ -240,3 +253,4 @@ export const processCommentMentions = ({
 
   return Array.from(notifiedUsernames);
 };
+

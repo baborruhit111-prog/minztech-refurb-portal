@@ -68,6 +68,29 @@ export const deleteUser = async (userId) => {
   safeSupabaseExec((sb) => sb.from("refurb_users").delete().eq("id", userId));
 };
 
+// Merge users pulled from Supabase Cloud so all devices know about newly created accounts (e.g. demo.mt)
+export const syncRemoteUsersToLocal = (remoteUsers) => {
+  if (!Array.isArray(remoteUsers) || remoteUsers.length === 0) return;
+  const current = getUsers();
+  const map = new Map();
+  current.forEach(u => {
+    const key = (u.username || "").toLowerCase();
+    if (key) map.set(key, u);
+  });
+  remoteUsers.forEach(ru => {
+    const key = (ru.username || "").toLowerCase();
+    if (key) {
+      map.set(key, { ...(map.get(key) || {}), ...ru });
+    }
+  });
+  const merged = Array.from(map.values());
+  save(KEYS.USERS, merged);
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("minztech_data_refreshed", { detail: { type: "users" } }));
+  }
+};
+
+
 // ================= CUSTOMERS =================
 export const getCustomers = () => load(KEYS.CUSTOMERS, INITIAL_CUSTOMERS);
 export const saveCustomer = (customer) => {
