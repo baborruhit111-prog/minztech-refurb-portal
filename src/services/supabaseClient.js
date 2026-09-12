@@ -78,6 +78,9 @@ export const safeSupabaseExec = (fn) => {
 // RESILIENT OFFLINE QUEUE & DATA INTEGRITY
 // ==========================================
 
+let isFlushingQueue = false;
+let autoFlushTimer = null;
+
 export const getSyncQueue = () => {
   try {
     const raw = localStorage.getItem(SYNC_QUEUE_KEY);
@@ -85,6 +88,54 @@ export const getSyncQueue = () => {
   } catch (e) {
     return [];
   }
+};
+
+// Immediate background flush: sends pending changes to Supabase and clears from queue
+export const flushSyncQueue = async () => {
+  const supabase = getSupabase();
+  if (!supabase || isFlushingQueue) return;
+
+  const queue = getSyncQueue();
+  if (queue.length === 0) return;
+
+  isFlushingQueue = true;
+  try {
+    const remaining = [];
+    for (const item of queue) {
+      try {
+        if (item.action === "upsert") {
+          const { error } = await supabase.from(item.table).upsert(item.record);
+          if (error) {
+            console.warn(`Sync retry queued for ${item.table}:`, error.message);
+            remaining.push(item);
+          }
+        } else if (item.action === "delete") {
+          const { error } = await supabase.from(item.table).delete().eq("id", item.record.id);
+          if (error) {
+            console.warn(`Delete retry queued for ${item.table}:`, error.message);
+            remaining.push(item);
+          }
+        }
+      } catch (err) {
+        remaining.push(item);
+      }
+    }
+    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(remaining));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("minztech_sync_updated", { detail: { queueCount: remaining.length } }));
+    }
+  } catch (e) {
+    console.warn("Notice: Auto-flush sync queue error:", e);
+  } finally {
+    isFlushingQueue = false;
+  }
+};
+
+export const triggerAutoFlush = () => {
+  if (autoFlushTimer) clearTimeout(autoFlushTimer);
+  autoFlushTimer = setTimeout(() => {
+    flushSyncQueue();
+  }, 100);
 };
 
 export const addToSyncQueue = (table, action, record) => {
@@ -98,11 +149,77 @@ export const addToSyncQueue = (table, action, record) => {
   };
   queue.push(queueItem);
   localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue));
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("minztech_sync_updated", { detail: { queueCount: queue.length } }));
+  }
+
+  // Fast automatic flush so operations don't get stuck in pending queue
+  triggerAutoFlush();
+
   return queueItem;
 };
 
 export const clearSyncQueue = () => {
   localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify([]));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("minztech_sync_updated", { detail: { queueCount: 0 } }));
+  }
+};
+
+// Automatic background polling loop for multi-device sync and fast mentions delivery
+export const startAutoSyncBackgroundLoop = (activeUsername) => {
+  if (typeof window === "undefined") return () => {};
+
+  const runTick = async () => {
+    // 1. Flush any pending queue operations
+    flushSyncQueue();
+
+    const supabase = getSupabase();
+    if (!supabase || !activeUsername) return;
+
+    try {
+      // 2. Poll for new unread notifications for this user
+      const { data: remoteNotifs, error: notifErr } = await supabase
+        .from("refurb_notifications")
+        .select("*")
+        .eq("recipientUsername", activeUsername)
+        .order("createdAt", { ascending: false })
+        .limit(15);
+
+      if (!notifErr && remoteNotifs && remoteNotifs.length > 0) {
+        const localRaw = localStorage.getItem("minztech_notifications");
+        const localNotifs = localRaw ? JSON.parse(localRaw) : [];
+        const localIds = new Set(localNotifs.map(n => n.id));
+
+        let hasNew = false;
+        for (const rn of remoteNotifs) {
+          if (!localIds.has(rn.id)) {
+            hasNew = true;
+            localNotifs.unshift(rn);
+            // Trigger in-app notification banner
+            window.dispatchEvent(new CustomEvent("minztech_in_app_notification", { detail: rn }));
+          }
+        }
+
+        if (hasNew) {
+          localStorage.setItem("minztech_notifications", JSON.stringify(localNotifs));
+          window.dispatchEvent(new CustomEvent("minztech_data_refreshed", { detail: { type: "notifications" } }));
+        }
+      }
+    } catch (err) {
+      console.warn("Auto sync loop note:", err);
+    }
+  };
+
+  // Initial tick after 1s, then every 6s
+  const initialTimer = setTimeout(runTick, 1000);
+  const interval = setInterval(runTick, 6000);
+
+  return () => {
+    clearTimeout(initialTimer);
+    clearInterval(interval);
+  };
 };
 
 // ==========================================

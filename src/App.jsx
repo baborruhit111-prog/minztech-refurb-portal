@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "./context/AuthContext";
 import Login from "./components/Login";
 import Sidebar from "./components/Sidebar";
@@ -12,14 +12,30 @@ import TasksManager from "./components/TasksManager";
 import UserManagement from "./components/UserManagement";
 import SupabaseSyncModal from "./components/SupabaseSyncModal";
 import NotificationCenter from "./components/NotificationCenter";
+import InAppNotificationBanner from "./components/InAppNotificationBanner";
+import { startAutoSyncBackgroundLoop } from "./services/supabaseClient";
 
 export default function App() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, loading, isAdmin, isSuperAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSyncModalOpen, setIsSyncModalOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [syncStatus, setSyncStatus] = useState({ status: "idle", message: "" });
+
+  // Fast background multi-device synchronization & mentions loop
+  useEffect(() => {
+    if (!user?.username) return;
+    const cleanup = startAutoSyncBackgroundLoop(user.username);
+    return cleanup;
+  }, [user?.username]);
+
+  // Restrict User Access tab strictly to Super Admin / Owner
+  useEffect(() => {
+    if (activeTab === "users" && !isSuperAdmin) {
+      setActiveTab("dashboard");
+    }
+  }, [activeTab, isSuperAdmin]);
 
   if (loading) {
     return (
@@ -38,13 +54,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen min-h-[100dvh] bg-brand-black text-gray-100 flex flex-row overflow-x-hidden selection:bg-brand-neon selection:text-brand-black">
+      {/* Interactive In-App Notification Banner for Mobile & Desktop */}
+      <InAppNotificationBanner 
+        setActiveTab={setActiveTab} 
+        onOpenNotifications={() => setIsNotificationsOpen(true)} 
+      />
+
       {/* Left Sidebar (Fixed on Desktop >= lg, Slide-in Drawer on Mobile < lg) */}
       <Sidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
-        onOpenSyncModal={() => setIsSyncModalOpen(true)}
+        onOpenSyncModal={() => { if (isSuperAdmin) setIsSyncModalOpen(true); }}
       />
 
       {/* Main Content Area (Automatically fills 100% of remaining screen width) */}
@@ -54,7 +76,7 @@ export default function App() {
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
           onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          onOpenSyncModal={() => setIsSyncModalOpen(true)}
+          onOpenSyncModal={() => { if (isSuperAdmin) setIsSyncModalOpen(true); }}
           onOpenNotifications={() => setIsNotificationsOpen(true)}
           syncStatus={syncStatus}
         />
@@ -64,7 +86,7 @@ export default function App() {
           {activeTab === "dashboard" && (
             <Dashboard 
               setActiveTab={setActiveTab} 
-              onOpenSyncModal={() => setIsSyncModalOpen(true)} 
+              onOpenSyncModal={() => { if (isSuperAdmin) setIsSyncModalOpen(true); }} 
             />
           )}
           {activeTab === "customers" && <CustomersCRM />}
@@ -72,7 +94,7 @@ export default function App() {
           {activeTab === "calendar" && <SocialCalendar />}
           {activeTab === "media" && <MediaGallery />}
           {activeTab === "tasks" && <TasksManager />}
-          {activeTab === "users" && isAdmin && <UserManagement />}
+          {activeTab === "users" && isSuperAdmin && <UserManagement />}
         </main>
 
         {/* Sticky Enterprise Footer */}

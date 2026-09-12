@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { getUsers } from "../services/storage";
 import { authenticateUserOnline } from "../services/supabaseClient";
 
@@ -41,8 +41,8 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
-    isAdmin: user?.role === "Admin",
-    isSuperAdmin: user?.username === "mt206.ruhit",
+    isAdmin: user?.role === "Admin" || (user?.username || "").toLowerCase() === "mt206.ruhit",
+    isSuperAdmin: (user?.username || "").toLowerCase() === "mt206.ruhit" || user?.role === "SuperAdmin" || (user?.title || "").toLowerCase().includes("owner"),
     login,
     logout,
     loading

@@ -21,7 +21,7 @@ export default function Navbar({
   onOpenNotifications, 
   syncStatus 
 }) {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const [queueCount, setQueueCount] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const config = getSupabaseConfig();
@@ -69,7 +69,7 @@ export default function Navbar({
             <img 
               src="/brand/logo-white.png" 
               alt="MiNZTECH" 
-              className="h-7 w-auto object-contain" 
+              className="h-10 w-auto object-contain" 
             />
           </div>
 
@@ -94,29 +94,31 @@ export default function Navbar({
             <span className="text-brand-lime font-medium">Mexico Warehouse</span>
           </div>
 
-          {/* Supabase Cloud Live Sync Pill */}
-          <button
-            onClick={onOpenSyncModal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-brand-surface border border-brand-border hover:border-brand-neon/50 group"
-            title="Click to view Supabase database connection & sync queue"
-          >
-            <Database className="w-3.5 h-3.5 text-brand-neon group-hover:rotate-12 transition-transform" />
-            <span className="hidden sm:inline text-gray-300">Supabase:</span>
-            {config.isConfigured ? (
-              <span className="text-brand-neon font-semibold flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand-neon animate-pulse"></span>
-                <span className="text-[11px]">Online</span>
-              </span>
-            ) : (
-              <span className="text-amber-400 font-medium text-[11px]">Local</span>
-            )}
+          {/* Supabase Cloud Live Sync Pill - ONLY for Super Admin / Owner */}
+          {isSuperAdmin && (
+            <button
+              onClick={onOpenSyncModal}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all bg-brand-surface border border-brand-border hover:border-brand-neon/50 group"
+              title="Click to view Supabase database connection & sync queue"
+            >
+              <Database className="w-3.5 h-3.5 text-brand-neon group-hover:rotate-12 transition-transform" />
+              <span className="hidden sm:inline text-gray-300">Supabase:</span>
+              {config.isConfigured ? (
+                <span className="text-brand-neon font-semibold flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-neon animate-pulse"></span>
+                  <span className="text-[11px]">Online</span>
+                </span>
+              ) : (
+                <span className="text-amber-400 font-medium text-[11px]">Local</span>
+              )}
 
-            {queueCount > 0 && (
-              <span className="ml-0.5 px-1.5 py-0.2 bg-amber-500 text-brand-black font-bold rounded-full text-[10px]">
-                {queueCount}
-              </span>
-            )}
-          </button>
+              {queueCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 bg-amber-500 text-brand-black font-bold rounded-full text-[10px]">
+                  {queueCount}
+                </span>
+              )}
+            </button>
+          )}
 
           {/* Notification Center Bell Button */}
           <button

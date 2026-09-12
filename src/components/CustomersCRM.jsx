@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { 
   Users, UserCheck, UserX, MessageSquare, Mail, Search, 
   Plus, Download, Upload, CheckCircle2, DollarSign, Laptop, Edit3, Trash2, 
   Copy, Send, Sparkles, Globe2, Calendar, Check, Filter, X, 
   ChevronDown, CheckSquare, Square, MinusSquare, RefreshCw, 
-  FileSpreadsheet, User, Building, Phone, AlertCircle, ArrowRight
+  FileSpreadsheet, User, Building, Phone, AlertCircle, ArrowRight,
+  LayoutList, LayoutGrid, PhoneCall, ExternalLink
 } from "lucide-react";
 import { 
   getCustomers, 
@@ -22,6 +23,16 @@ export default function CustomersCRM() {
   const [activeTab, setActiveTab] = useState("all");
   const [marketFilter, setMarketFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState("auto"); // "auto", "table", "card"
+
+  // Live auto-refresh listener when background sync updates data
+  useEffect(() => {
+    const handleRefresh = () => {
+      setCustomers(getCustomers());
+    };
+    window.addEventListener("minztech_data_refreshed", handleRefresh);
+    return () => window.removeEventListener("minztech_data_refreshed", handleRefresh);
+  }, []);
   
   // Selection State for Bulk Actions
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -863,6 +874,42 @@ Marco Rossi,Guadalajara Electro Mayoreo,marco@gdlmayoreo.com,+52 33 9876 5432,LA
               </button>
             </div>
 
+            {/* View Mode Switcher: Auto vs Table vs Cards */}
+            <div className="flex items-center gap-1 bg-brand-dark p-1 rounded-xl border border-brand-border">
+              <button
+                type="button"
+                onClick={() => setViewMode("auto")}
+                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  viewMode === "auto" ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400 hover:text-white"
+                }`}
+                title="Responsive Mode: Table on desktop, Cards on mobile"
+              >
+                Auto
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  viewMode === "table" ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400 hover:text-white"
+                }`}
+                title="Table View (Full CRM Columns)"
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Table</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("card")}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                  viewMode === "card" ? "bg-brand-surface text-brand-neon font-bold" : "text-gray-400 hover:text-white"
+                }`}
+                title="Card View (Mobile-Friendly Contacts)"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Cards</span>
+              </button>
+            </div>
+
             {hasActiveFilters && (
               <button
                 onClick={clearAllFilters}
@@ -985,214 +1032,441 @@ Marco Rossi,Guadalajara Electro Mayoreo,marco@gdlmayoreo.com,+52 33 9876 5432,LA
         )}
       </div>
 
-      {/* Enterprise List View Table */}
-      <div className="bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-md w-full">
-        <div className="overflow-x-auto w-full">
-          <table className="w-full min-w-[1180px] text-left text-xs text-gray-300">
-            <thead className="bg-brand-dark/95 text-gray-400 uppercase font-mono text-[11px] border-b border-brand-border select-none">
-              <tr>
-                {/* Select All Checkbox */}
-                <th className="py-3.5 px-3 w-10 text-center">
-                  <button
-                    type="button"
-                    onClick={handleToggleSelectAll}
-                    className="p-1 rounded text-gray-400 hover:text-white transition-colors"
-                    title={isAllSelected ? "Deselect all" : "Select all"}
-                  >
-                    {isAllSelected ? (
-                      <CheckSquare className="w-4 h-4 text-brand-neon" />
-                    ) : isSomeSelected ? (
-                      <MinusSquare className="w-4 h-4 text-brand-lime" />
-                    ) : (
-                      <Square className="w-4 h-4 text-gray-500" />
-                    )}
-                  </button>
-                </th>
-
-                <th className="py-3.5 px-4 min-w-[210px]">Customer & Company</th>
-                <th className="py-3.5 px-3 min-w-[125px]">Segment / Market</th>
-                <th className="py-3.5 px-4 min-w-[170px]">Contact Channels</th>
-                <th className="py-3.5 px-3 min-w-[130px]">Source</th>
-                <th className="py-3.5 px-3 min-w-[130px]">Collected By</th>
-                <th className="py-3.5 px-3 min-w-[130px]">Date Added</th>
-                <th className="py-3.5 px-3 min-w-[125px]">Pipeline Stage</th>
-                <th className="py-3.5 px-3 min-w-[170px]">
-                  <div className="flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-brand-neon" />
-                    <span>Last Contacted</span>
-                  </div>
-                </th>
-                <th className="py-3.5 px-4 text-right min-w-[140px]">Outreach Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-brand-border/40">
-              {filteredCustomers.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="py-14 text-center text-gray-400">
-                    <Users className="w-10 h-10 mx-auto text-gray-600 mb-2" />
-                    <p className="text-sm font-semibold text-white">No customer records match your filter criteria</p>
-                    <p className="text-xs text-gray-500 mt-1">Try resetting the column filters or adding a new customer.</p>
-                    {hasActiveFilters && (
+      {/* ========================================================================= */}
+      {/* PROFESSIONAL CRM VIEW: RESPONSIVE DESKTOP TABLE & MOBILE CONTACT CARDS   */}
+      {/* ========================================================================= */}
+      {filteredCustomers.length === 0 ? (
+        <div className="bg-brand-surface border border-brand-border rounded-2xl p-12 text-center text-gray-400">
+          <Users className="w-12 h-12 mx-auto text-gray-600 mb-3" />
+          <p className="text-base font-semibold text-white">No customer records match your filter criteria</p>
+          <p className="text-xs text-gray-400 mt-1">Try resetting the column filters or adding a new customer.</p>
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="mt-4 px-4 py-2 rounded-xl bg-brand-neon text-brand-black text-xs font-bold hover:bg-brand-lime transition-all shadow-md"
+            >
+              Reset All Filters
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* 1. PROFESSIONAL DESKTOP TABLE VIEW */}
+          <div className={`${viewMode === "card" ? "hidden" : viewMode === "table" ? "block" : "hidden lg:block"} bg-brand-surface border border-brand-border rounded-2xl overflow-hidden shadow-md w-full`}>
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left text-xs text-gray-300">
+                <thead className="bg-brand-dark/95 text-gray-400 uppercase font-mono text-[11px] border-b border-brand-border select-none">
+                  <tr>
+                    {/* Select All Checkbox */}
+                    <th className="py-3.5 px-3 w-12 text-center">
                       <button
-                        onClick={clearAllFilters}
-                        className="mt-3 px-3 py-1.5 rounded-xl bg-brand-neon text-brand-black text-xs font-bold hover:bg-brand-lime transition-all"
+                        type="button"
+                        onClick={handleToggleSelectAll}
+                        className="p-1 rounded text-gray-400 hover:text-white transition-colors"
+                        title={isAllSelected ? "Deselect all" : "Select all"}
                       >
-                        Reset All Filters
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ) : (
-                filteredCustomers.map((cust) => {
-                  const isWarm = cust.type === "warm";
-                  const isSelected = selectedIds.has(cust.id);
-
-                  return (
-                    <tr 
-                      key={cust.id} 
-                      className={`transition-colors group ${
-                        isSelected 
-                          ? "bg-brand-neon/10 hover:bg-brand-neon/15" 
-                          : "hover:bg-brand-hover/40"
-                      }`}
-                    >
-                      {/* Row Checkbox */}
-                      <td className="py-3.5 px-3 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleRow(cust.id)}
-                          className="p-1 rounded text-gray-400 hover:text-white transition-colors"
-                        >
-                          {isSelected ? (
-                            <CheckSquare className="w-4 h-4 text-brand-neon" />
-                          ) : (
-                            <Square className="w-4 h-4 text-gray-600 group-hover:text-gray-400" />
-                          )}
-                        </button>
-                      </td>
-
-                      {/* Customer & Company */}
-                      <td className="py-3.5 px-4">
-                        <div className="font-bold text-white text-sm">{cust.name}</div>
-                        <div className="text-xs text-brand-lime font-medium mt-0.5">{cust.company}</div>
-                        {cust.notes && (
-                          <div className="text-[11px] text-gray-400 truncate max-w-xs xl:max-w-sm 2xl:max-w-md mt-0.5 italic">
-                            "{cust.notes}"
-                          </div>
+                        {isAllSelected ? (
+                          <CheckSquare className="w-4 h-4 text-brand-neon" />
+                        ) : isSomeSelected ? (
+                          <MinusSquare className="w-4 h-4 text-brand-lime" />
+                        ) : (
+                          <Square className="w-4 h-4 text-gray-500" />
                         )}
-                      </td>
+                      </button>
+                    </th>
 
-                      {/* Segment & Market */}
-                      <td className="py-3.5 px-3">
-                        <div className="flex flex-col gap-1 items-start">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            isWarm 
-                              ? "bg-brand-neon/20 text-brand-neon border border-brand-neon/30" 
-                              : "bg-blue-500/20 text-blue-300 border border-blue-500/30"
-                          }`}>
-                            {isWarm ? "🔥 Warm Prospect" : "❄️ Cold Prospect"}
+                    <th className="py-3.5 px-4 font-bold text-gray-200">Customer & Company</th>
+                    <th className="py-3.5 px-3 font-bold text-gray-200">Market / Type</th>
+                    <th className="py-3.5 px-4 font-bold text-gray-200">Direct Contact Channels</th>
+                    <th className="py-3.5 px-3 font-bold text-gray-200">Lead Source & Rep</th>
+                    <th className="py-3.5 px-3 font-bold text-gray-200">Pipeline Stage</th>
+                    <th className="py-3.5 px-3 font-bold text-gray-200">Date & Last Contact</th>
+                    <th className="py-3.5 px-4 text-right font-bold text-gray-200">Outreach Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-brand-border/40">
+                  {filteredCustomers.map((cust) => {
+                    const isWarm = cust.type === "warm";
+                    const isSelected = selectedIds.has(cust.id);
+                    const cleanPhone = (cust.whatsapp || cust.phone || "").replace(/[^0-9]/g, "");
+
+                    const getStageColor = (status) => {
+                      switch (status) {
+                        case "Active Buyer": return "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+                        case "Negotiation": return "bg-amber-500/20 text-amber-300 border-amber-500/40";
+                        case "Quote Sent": return "bg-purple-500/20 text-purple-300 border-purple-500/40";
+                        case "Offer Sent (WhatsApp)": return "bg-green-500/20 text-green-300 border-green-500/40";
+                        case "Offer Sent (Email)": return "bg-blue-500/20 text-blue-300 border-blue-500/40";
+                        default: return "bg-gray-500/20 text-gray-300 border-gray-500/40";
+                      }
+                    };
+
+                    return (
+                      <tr 
+                        key={cust.id} 
+                        className={`transition-colors group ${
+                          isSelected 
+                            ? "bg-brand-neon/10 hover:bg-brand-neon/15" 
+                            : "hover:bg-brand-hover/40"
+                        }`}
+                      >
+                        {/* Row Checkbox */}
+                        <td className="py-3.5 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleRow(cust.id)}
+                            className="p-1 rounded text-gray-400 hover:text-white transition-colors"
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-brand-neon" />
+                            ) : (
+                              <Square className="w-4 h-4 text-gray-600 group-hover:text-gray-400" />
+                            )}
+                          </button>
+                        </td>
+
+                        {/* Customer & Company */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-brand-dark border border-brand-border flex items-center justify-center font-bold text-brand-neon flex-shrink-0 text-xs shadow-inner">
+                              {cust.name?.charAt(0) || "C"}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-bold text-white text-sm truncate">{cust.name}</div>
+                              <div className="text-xs text-brand-lime font-medium truncate">{cust.company}</div>
+                              {cust.notes && (
+                                <div className="text-[11px] text-gray-400 truncate max-w-xs xl:max-w-sm mt-0.5 italic">
+                                  "{cust.notes}"
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Segment & Market */}
+                        <td className="py-3.5 px-3">
+                          <div className="flex flex-col gap-1 items-start">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              isWarm 
+                                ? "bg-brand-neon/15 text-brand-neon border-brand-neon/30" 
+                                : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                            }`}>
+                              {isWarm ? "🔥 Warm Lead" : "❄️ Cold Lead"}
+                            </span>
+                            <span className="text-[11px] font-mono text-gray-300 flex items-center gap-1">
+                              <span>{cust.market === "LATAM" ? "🇲🇽 Mexico" : "🇺🇸 USA"}</span>
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Contact Channels with 1-click links */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-1">
+                            {cust.email && (
+                              <a 
+                                href={`mailto:${cust.email}`}
+                                className="flex items-center gap-1.5 text-xs text-gray-200 hover:text-brand-neon font-mono truncate transition-colors max-w-[210px]"
+                                title="Click to send email"
+                              >
+                                <Mail className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                <span className="truncate">{cust.email}</span>
+                              </a>
+                            )}
+                            {(cust.whatsapp || cust.phone) && (
+                              <div className="flex items-center gap-2">
+                                <a 
+                                  href={`https://wa.me/${cleanPhone}`} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 font-mono font-medium transition-colors"
+                                  title="Open WhatsApp chat"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
+                                  <span>{cust.whatsapp || cust.phone}</span>
+                                </a>
+                                {cust.phone && (
+                                  <a
+                                    href={`tel:${cust.phone}`}
+                                    className="p-1 rounded text-gray-400 hover:text-white"
+                                    title="Call phone"
+                                  >
+                                    <PhoneCall className="w-3 h-3" />
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Lead Source & Collected By */}
+                        <td className="py-3.5 px-3">
+                          <div className="space-y-1">
+                            <span className="px-2 py-0.5 rounded-lg bg-brand-dark text-gray-200 font-medium text-[11px] border border-brand-border inline-flex items-center gap-1">
+                              <Globe2 className="w-3 h-3 text-brand-lime" />
+                              <span className="truncate max-w-[110px]">{cust.source || "Direct"}</span>
+                            </span>
+                            <div className="text-[11px] text-gray-400 flex items-center gap-1 pl-1">
+                              <User className="w-3 h-3 text-brand-neon" />
+                              <span className="truncate max-w-[120px]">{cust.collectedBy || "Sarah Jenkins"}</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Pipeline Stage with Color Coded Badge */}
+                        <td className="py-3.5 px-3">
+                          <span className={`px-2.5 py-1 rounded-lg font-medium text-[11px] border whitespace-nowrap inline-block ${getStageColor(cust.status)}`}>
+                            {cust.status}
                           </span>
-                          <span className="text-[11px] font-mono text-gray-300">
+                        </td>
+
+                        {/* Date Added & Last Contacted with INLINE UPDATE */}
+                        <td className="py-3.5 px-3">
+                          <div className="space-y-1.5">
+                            <div className="text-[10px] text-gray-400 font-mono">
+                              Added: <span className="text-gray-200">{cust.dateAdded || "Recent"}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="date"
+                                value={cust.lastContactDate || ""}
+                                onChange={(e) => handleUpdateLastContactDate(cust, e.target.value)}
+                                className="px-1.5 py-0.5 bg-brand-dark border border-brand-border rounded text-white text-[10px] font-mono focus:ring-1 focus:ring-brand-neon focus:outline-none cursor-pointer"
+                                title="Click to edit date directly"
+                              />
+                              <button
+                                onClick={() => handleSetContactToday(cust)}
+                                className="px-1.5 py-0.5 rounded bg-brand-dark hover:bg-brand-neon hover:text-brand-black text-brand-neon border border-brand-border text-[9px] font-bold transition-colors"
+                                title="Set last contacted to today"
+                              >
+                                Today
+                              </button>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenOutreach(cust)}
+                              className="flex items-center gap-1 px-3 py-1.5 bg-brand-neon hover:bg-brand-lime text-brand-black font-bold text-xs rounded-xl shadow-sm transition-all active:scale-95"
+                              title="1-Click WhatsApp or Email stock pitch"
+                            >
+                              <Send className="w-3 h-3" />
+                              <span>Pitch</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleOpenEdit(cust)}
+                              title="Edit customer"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-brand-neon hover:bg-brand-dark transition-colors"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => handleDelete(cust.id)}
+                              title="Delete customer"
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-brand-dark transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 2. DEDICATED MOBILE & TABLET CRM CONTACT CARDS VIEW */}
+          <div className={`${viewMode === "table" ? "hidden" : viewMode === "card" ? "block" : "block lg:hidden"} grid grid-cols-1 md:grid-cols-2 gap-3.5`}>
+            {filteredCustomers.map((cust) => {
+              const isWarm = cust.type === "warm";
+              const isSelected = selectedIds.has(cust.id);
+              const cleanPhone = (cust.whatsapp || cust.phone || "").replace(/[^0-9]/g, "");
+
+              const getStageColor = (status) => {
+                switch (status) {
+                  case "Active Buyer": return "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+                  case "Negotiation": return "bg-amber-500/20 text-amber-300 border-amber-500/40";
+                  case "Quote Sent": return "bg-purple-500/20 text-purple-300 border-purple-500/40";
+                  case "Offer Sent (WhatsApp)": return "bg-green-500/20 text-green-300 border-green-500/40";
+                  case "Offer Sent (Email)": return "bg-blue-500/20 text-blue-300 border-blue-500/40";
+                  default: return "bg-gray-500/20 text-gray-300 border-gray-500/40";
+                }
+              };
+
+              return (
+                <div 
+                  key={cust.id}
+                  className={`bg-brand-surface border rounded-2xl p-4 shadow-sm space-y-3 transition-all ${
+                    isSelected ? "border-brand-neon bg-brand-neon/5" : "border-brand-border"
+                  }`}
+                >
+                  {/* Card Top: Checkbox, Name, Company, Badges */}
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleRow(cust.id)}
+                        className="p-1 rounded text-gray-400 hover:text-white transition-colors mt-0.5"
+                      >
+                        {isSelected ? (
+                          <CheckSquare className="w-4 h-4 text-brand-neon" />
+                        ) : (
+                          <Square className="w-4 h-4 text-gray-600" />
+                        )}
+                      </button>
+
+                      <div className="w-10 h-10 rounded-xl bg-brand-dark border border-brand-border flex items-center justify-center font-bold text-brand-neon text-sm flex-shrink-0 shadow-inner">
+                        {cust.name?.charAt(0) || "C"}
+                      </div>
+
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-white text-sm truncate">{cust.name}</h3>
+                        <p className="text-xs text-brand-lime font-medium truncate">{cust.company}</p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${
+                            isWarm 
+                              ? "bg-brand-neon/15 text-brand-neon border-brand-neon/30" 
+                               : "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                          }`}>
+                            {isWarm ? "🔥 Warm" : "❄️ Cold"}
+                          </span>
+                          <span className="text-[10px] font-mono text-gray-300 px-1.5 py-0.5 rounded bg-brand-dark border border-brand-border">
                             {cust.market === "LATAM" ? "🇲🇽 Mexico" : "🇺🇸 USA"}
                           </span>
+                          <span className={`px-2 py-0.5 rounded-full font-medium text-[10px] border ${getStageColor(cust.status)}`}>
+                            {cust.status}
+                          </span>
                         </div>
-                      </td>
+                      </div>
+                    </div>
 
-                      {/* Contact Info */}
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-0.5">
-                          <div className="font-mono text-gray-200 text-xs truncate max-w-[200px]">{cust.email}</div>
-                          <div className="font-mono text-brand-neon font-medium text-xs">{cust.whatsapp || cust.phone}</div>
-                        </div>
-                      </td>
+                    {/* Quick Edit/Delete */}
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleOpenEdit(cust)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-brand-neon hover:bg-brand-dark transition-colors"
+                        title="Edit customer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(cust.id)}
+                        className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-brand-dark transition-colors"
+                        title="Delete customer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
 
-                      {/* Lead Source (Replaces Preferred Brands) */}
-                      <td className="py-3.5 px-3">
-                        <span className="px-2.5 py-1 rounded-lg bg-brand-dark text-gray-200 font-medium text-[11px] border border-brand-border inline-flex items-center gap-1">
-                          <Globe2 className="w-3 h-3 text-brand-lime" />
-                          <span>{cust.source || "Direct"}</span>
-                        </span>
-                      </td>
+                  {/* 1-Tap Mobile Outreach Action Buttons */}
+                  <div className="grid grid-cols-4 gap-1.5 pt-1">
+                    {cleanPhone ? (
+                      <a
+                        href={`https://wa.me/${cleanPhone}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/40 text-emerald-300 text-[10px] font-bold transition-colors"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 mb-0.5 text-emerald-400" />
+                        <span>WhatsApp</span>
+                      </a>
+                    ) : (
+                      <span className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-brand-dark text-gray-600 text-[10px]">
+                        <MessageSquare className="w-3.5 h-3.5 mb-0.5" />
+                        <span>No WA</span>
+                      </span>
+                    )}
 
-                      {/* Collected By (Replaces Preferred Brands) */}
-                      <td className="py-3.5 px-3">
-                        <span className="px-2 py-1 rounded-lg bg-brand-dark/80 text-gray-300 font-medium text-[11px] border border-brand-border/80 inline-flex items-center gap-1.5">
-                          <User className="w-3 h-3 text-brand-neon" />
-                          <span>{cust.collectedBy || "Unassigned"}</span>
-                        </span>
-                      </td>
+                    {cust.phone ? (
+                      <a
+                        href={`tel:${cust.phone}`}
+                        className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-blue-950/40 hover:bg-blue-900/60 border border-blue-500/40 text-blue-300 text-[10px] font-bold transition-colors"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5 mb-0.5 text-blue-400" />
+                        <span>Call</span>
+                      </a>
+                    ) : (
+                      <span className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-brand-dark text-gray-600 text-[10px]">
+                        <PhoneCall className="w-3.5 h-3.5 mb-0.5" />
+                        <span>No Tel</span>
+                      </span>
+                    )}
 
-                      {/* Date Added */}
-                      <td className="py-3.5 px-3">
-                        <span className="font-mono text-gray-300 text-[11px]">
-                          {cust.dateAdded || "Recent"}
-                        </span>
-                      </td>
+                    {cust.email ? (
+                      <a
+                        href={`mailto:${cust.email}`}
+                        className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/40 text-purple-300 text-[10px] font-bold transition-colors"
+                      >
+                        <Mail className="w-3.5 h-3.5 mb-0.5 text-purple-400" />
+                        <span>Email</span>
+                      </a>
+                    ) : (
+                      <span className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-brand-dark text-gray-600 text-[10px]">
+                        <Mail className="w-3.5 h-3.5 mb-0.5" />
+                        <span>No Email</span>
+                      </span>
+                    )}
 
-                      {/* Pipeline Stage */}
-                      <td className="py-3.5 px-3">
-                        <span className="px-2.5 py-1 rounded bg-brand-dark text-white font-medium text-[11px] border border-brand-border inline-block whitespace-nowrap">
-                          {cust.status}
-                        </span>
-                      </td>
+                    <button
+                      onClick={() => handleOpenOutreach(cust)}
+                      className="flex flex-col items-center justify-center py-2 px-1 rounded-xl bg-brand-neon hover:bg-brand-lime text-brand-black text-[10px] font-bold transition-colors shadow-sm"
+                    >
+                      <Send className="w-3.5 h-3.5 mb-0.5" />
+                      <span>Pitch</span>
+                    </button>
+                  </div>
 
-                      {/* Last Contacted with INLINE UPDATE OPTION */}
-                      <td className="py-3.5 px-3">
-                        <div className="flex items-center gap-1.5">
-                          <input
-                            type="date"
-                            value={cust.lastContactDate || ""}
-                            onChange={(e) => handleUpdateLastContactDate(cust, e.target.value)}
-                            className="px-2 py-1 bg-brand-dark border border-brand-border rounded-lg text-white text-[11px] font-mono focus:ring-1 focus:ring-brand-neon focus:outline-none cursor-pointer"
-                            title="Click to edit date directly"
-                          />
-                          <button
-                            onClick={() => handleSetContactToday(cust)}
-                            className="px-2 py-1 rounded-lg bg-brand-dark hover:bg-brand-neon hover:text-brand-black text-brand-neon border border-brand-border text-[10px] font-bold transition-colors"
-                            title="Set last contacted to today"
-                          >
-                            Today
-                          </button>
-                        </div>
-                      </td>
+                  {/* Card Details & Date Metadata */}
+                  <div className="bg-brand-dark/90 rounded-xl p-2.5 border border-brand-border/80 space-y-1.5 text-[11px]">
+                    <div className="flex items-center justify-between text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <Globe2 className="w-3 h-3 text-brand-lime" />
+                        <span className="text-gray-300">{cust.source || "Direct Lead"}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <User className="w-3 h-3 text-brand-neon" />
+                        <span className="text-gray-300">{cust.collectedBy || "Sarah J."}</span>
+                      </span>
+                    </div>
 
-                      {/* Actions */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenOutreach(cust)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-brand-neon hover:bg-brand-lime text-brand-black font-bold text-xs rounded-xl shadow-sm transition-all active:scale-95"
-                            title="1-Click WhatsApp or Email stock pitch"
-                          >
-                            <Send className="w-3 h-3" />
-                            <span>Pitch</span>
-                          </button>
+                    <div className="flex items-center justify-between border-t border-brand-border/40 pt-1.5 text-gray-400">
+                      <span>Added: <strong className="text-gray-200 font-mono">{cust.dateAdded || "Recent"}</strong></span>
+                      <div className="flex items-center gap-1">
+                        <span>Last:</span>
+                        <input
+                          type="date"
+                          value={cust.lastContactDate || ""}
+                          onChange={(e) => handleUpdateLastContactDate(cust, e.target.value)}
+                          className="px-1 py-0.5 bg-brand-surface border border-brand-border rounded text-white text-[10px] font-mono focus:ring-1 focus:ring-brand-neon focus:outline-none"
+                        />
+                        <button
+                          onClick={() => handleSetContactToday(cust)}
+                          className="px-1.5 py-0.5 rounded bg-brand-neon text-brand-black text-[9px] font-bold"
+                        >
+                          Today
+                        </button>
+                      </div>
+                    </div>
 
-                          <button
-                            onClick={() => handleOpenEdit(cust)}
-                            title="Edit customer"
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-brand-neon hover:bg-brand-dark transition-colors"
-                          >
-                            <Edit3 className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            onClick={() => handleDelete(cust.id)}
-                            title="Delete customer"
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-brand-dark transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    {cust.notes && (
+                      <div className="border-t border-brand-border/40 pt-1 text-gray-400 italic">
+                        "{cust.notes}"
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* ========================================================================= */}
       {/* BULK EDIT MODAL (USER REQUESTED!) */}

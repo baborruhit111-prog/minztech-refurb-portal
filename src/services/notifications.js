@@ -1,6 +1,7 @@
 import { getUsers } from "./storage";
 import { addToSyncQueue, safeSupabaseExec } from "./supabaseClient";
 import { sendDesktopNotification } from "./desktopNotifications";
+import { triggerNotificationAlert } from "./audioHelper";
 
 const NOTIFICATIONS_KEY = "minztech_notifications";
 
@@ -64,7 +65,15 @@ export const addNotification = (notif) => {
   saveNotificationsList(updated);
   addToSyncQueue("refurb_notifications", "upsert", newNotif);
 
-  // Trigger browser desktop notification
+  // 1. Trigger audible chime and mobile vibration immediately
+  triggerNotificationAlert();
+
+  // 2. Dispatch interactive In-App notification event for phones & active screens
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("minztech_in_app_notification", { detail: newNotif }));
+  }
+
+  // 3. Trigger browser desktop notification if permitted
   sendDesktopNotification(
     `MiNZTECH Mention from ${notif.senderName || "Team Member"}`,
     notif.message,

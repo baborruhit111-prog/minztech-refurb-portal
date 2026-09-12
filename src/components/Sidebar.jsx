@@ -25,7 +25,7 @@ export default function Sidebar({
   onClose, 
   onOpenSyncModal 
 }) {
-  const { user, isAdmin, logout } = useAuth();
+  const { user, isAdmin, isSuperAdmin, logout } = useAuth();
   const config = getSupabaseConfig();
   const queueCount = getSyncQueue().length;
 
@@ -38,7 +38,8 @@ export default function Sidebar({
     { id: "tasks", label: "Tasks Manager", icon: CheckSquare },
   ];
 
-  if (isAdmin) {
+  // User Access ONLY for Super Admin / Owner!
+  if (isSuperAdmin) {
     navItems.push({ id: "users", label: "User Access", icon: ShieldAlert, badge: "Admin" });
   }
 
@@ -56,12 +57,12 @@ export default function Sidebar({
           <div className="flex items-center justify-between">
             <button 
               onClick={() => handleNavClick("dashboard")} 
-              className="flex items-center gap-3 group text-left focus:outline-none"
+              className="flex items-center gap-3.5 group text-left focus:outline-none"
             >
               <img 
                 src="/brand/logo-white.png" 
                 alt="MiNZTECH" 
-                className="h-9 w-auto object-contain transition-transform group-hover:scale-105" 
+                className="h-14 w-auto object-contain transition-transform group-hover:scale-105 drop-shadow-md" 
               />
               <div>
                 <span className="block text-[9px] uppercase font-bold tracking-widest text-brand-neon">
@@ -148,33 +149,35 @@ export default function Sidebar({
           </div>
         </div>
 
-        {/* Supabase Sync Button */}
-        <button
-          onClick={onOpenSyncModal}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-brand-surface hover:bg-brand-hover border border-brand-border hover:border-brand-neon/40 text-xs text-gray-300 transition-colors"
-          title="Manage cloud database sync"
-        >
-          <div className="flex items-center gap-2">
-            <Database className="w-3.5 h-3.5 text-brand-neon" />
-            <span className="font-semibold text-white">Supabase Cloud</span>
-          </div>
-          <div className="flex items-center gap-1">
-            {config.isConfigured ? (
-              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-semibold">
-                Online
-              </span>
-            ) : (
-              <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono font-semibold">
-                Local
-              </span>
-            )}
-            {queueCount > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-brand-black text-[9px] font-bold">
-                {queueCount}
-              </span>
-            )}
-          </div>
-        </button>
+        {/* Supabase Sync Button - ONLY for Super Admin / Owner */}
+        {isSuperAdmin && (
+          <button
+            onClick={onOpenSyncModal}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-brand-surface hover:bg-brand-hover border border-brand-border hover:border-brand-neon/40 text-xs text-gray-300 transition-colors"
+            title="Manage cloud database sync"
+          >
+            <div className="flex items-center gap-2">
+              <Database className="w-3.5 h-3.5 text-brand-neon" />
+              <span className="font-semibold text-white">Supabase Cloud</span>
+            </div>
+            <div className="flex items-center gap-1">
+              {config.isConfigured ? (
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-mono font-semibold">
+                  Online
+                </span>
+              ) : (
+                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono font-semibold">
+                  Local
+                </span>
+              )}
+              {queueCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-amber-500 text-brand-black text-[9px] font-bold">
+                  {queueCount}
+                </span>
+              )}
+            </div>
+          </button>
+        )}
 
         {/* User Session & Logout */}
         <div className="flex items-center justify-between pt-1">

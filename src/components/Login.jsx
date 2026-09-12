@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
-import { Lock, User, ShieldCheck, AlertCircle, Database, CheckCircle2, Laptop } from "lucide-react";
+import { Lock, User, ShieldCheck, AlertCircle, CheckCircle2 } from "lucide-react";
 import { getSupabaseConfig } from "../services/supabaseClient";
 
 export default function Login() {
@@ -68,29 +68,16 @@ export default function Login() {
         {/* Card Box */}
         <div className="bg-brand-surface/90 border border-brand-border rounded-2xl p-8 shadow-2xl backdrop-blur-xl transition-all duration-300">
           {/* Brand Logo & Header */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
+          <div className="text-center mb-7">
+            <div className="flex justify-center mb-3">
               <img 
                 src="/brand/logo-white.png" 
                 alt="MiNZTECH Logo" 
-                className="h-16 w-auto object-contain drop-shadow-md"
+                className="h-28 sm:h-32 w-auto max-w-[280px] object-contain drop-shadow-2xl transition-transform hover:scale-105"
               />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-white">Operations Portal</h1>
             <p className="text-sm text-gray-400 mt-1">Enterprise Laptop Refurbishing & Distribution</p>
-            
-            {/* Supabase Status Pill */}
-            <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-gray-300">
-              <Database className="w-3.5 h-3.5 text-brand-neon" />
-              <span>Cloud Auth Sync:</span>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                supabaseConfig.isConfigured 
-                  ? "bg-brand-neon/20 text-brand-neon border border-brand-neon/40" 
-                  : "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-              }`}>
-                {supabaseConfig.isConfigured ? "Supabase Connected" : "Local Sync Ready"}
-              </span>
-            </div>
           </div>
 
           {/* Error Message */}
@@ -211,15 +198,6 @@ export default function Login() {
               )}
             </button>
           </form>
-        </div>
-
-        {/* Footer Brand Info */}
-        <div className="mt-8 text-center text-xs text-gray-500 space-y-1">
-          <p className="flex items-center justify-center gap-2">
-            <Laptop className="w-4 h-4 text-brand-neon inline" />
-            <span>High-Volume HP • Dell • Lenovo 10,000+ Units/Mo</span>
-          </p>
-          <p>Dual-Market USA & Mexico Warehouse Logistics</p>
         </div>
       </div>
     </div>
